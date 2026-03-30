@@ -12,29 +12,89 @@ import {
   getVoteFlipVariants,
   motionTransitions,
 } from "@/lib/animations/presets";
+import type { PlanningEstimate } from "@/lib/types/domain";
 
 type PlayerStripProps = {
   players: RoomPlayer[];
   revealVotes: boolean;
 };
 
-function VoteStatus({ revealVotes, voteLabel }: { revealVotes: boolean; voteLabel: string }) {
+function RevealedEstimate({ vote }: { vote: PlanningEstimate }) {
+  const { reducedMotion } = useMotionPreferences();
+
+  const breakdown = [
+    { label: "SP", value: vote.storyPoints },
+    { label: "Complexity", value: vote.complexity },
+    { label: "Time", value: vote.timeConsuming },
+  ] as const;
+
+  return (
+    <div className="mt-2 grid grid-cols-3 gap-1.5">
+      {breakdown.map((entry, index) => (
+        <motion.div
+          key={entry.label}
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 3, scale: 0.98 }}
+          animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+          transition={
+            reducedMotion
+              ? motionTransitions.fast
+              : {
+                  ...motionTransitions.fast,
+                  delay: index * 0.04,
+                }
+          }
+          className="rounded-md border border-border/70 bg-surface-2/85 px-1.5 py-1 text-center"
+        >
+          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            {entry.label}
+          </p>
+          <p className="text-xs font-semibold text-foreground">{entry.value}</p>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function VoteStatus({
+  revealVotes,
+  vote,
+  hasVoted,
+}: {
+  revealVotes: boolean;
+  vote: PlanningEstimate | null;
+  hasVoted: boolean;
+}) {
   const { reducedMotion } = useMotionPreferences();
   const voteFlip = getVoteFlipVariants(reducedMotion);
+
+  const waitingLabel = hasVoted ? "Estimate locked" : "Waiting";
+  const hiddenLabel = revealVotes ? "No vote" : waitingLabel;
 
   return (
     <div className="mt-2 [perspective:900px]">
       <AnimatePresence initial={false} mode="wait">
-        <motion.p
-          key={`${revealVotes ? "revealed" : "hidden"}-${voteLabel}`}
-          variants={voteFlip}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          className="text-xs uppercase tracking-[0.14em] text-muted-foreground"
-        >
-          {voteLabel}
-        </motion.p>
+        {revealVotes && vote ? (
+          <motion.div
+            key={`revealed-${vote.storyPoints}-${vote.complexity}-${vote.timeConsuming}`}
+            variants={voteFlip}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+          >
+            <RevealedEstimate vote={vote} />
+          </motion.div>
+        ) : (
+          <motion.p
+            key={`hidden-${hiddenLabel}`}
+            variants={voteFlip}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="text-xs uppercase tracking-[0.14em] text-muted-foreground"
+          >
+            {hiddenLabel}
+          </motion.p>
+        )}
       </AnimatePresence>
     </div>
   );
@@ -137,11 +197,6 @@ export function PlayerStrip({ players, revealVotes }: PlayerStripProps) {
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <AnimatePresence initial={false}>
         {players.map((player) => {
-          const voteLabel = revealVotes
-            ? (player.vote ?? "-")
-            : player.hasVoted
-              ? "Voted"
-              : "Waiting";
           const isRecentJoin = recentlyJoinedIds.has(player.connectionId);
 
           return (
@@ -178,7 +233,11 @@ export function PlayerStrip({ players, revealVotes }: PlayerStripProps) {
                       {player.nickname}
                       {player.isSelf ? " (You)" : ""}
                     </p>
-                    <VoteStatus revealVotes={revealVotes} voteLabel={voteLabel} />
+                    <VoteStatus
+                      revealVotes={revealVotes}
+                      vote={player.vote}
+                      hasVoted={player.hasVoted}
+                    />
                   </div>
                 </Card>
               </motion.div>

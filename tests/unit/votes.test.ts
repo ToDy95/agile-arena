@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateVoteAverage, formatVoteAverage } from "@/lib/utils/votes";
+import {
+  calculatePlanningAverages,
+  calculateVoteAverage,
+  derivePlanningMood,
+  formatVoteAverage,
+} from "@/lib/utils/votes";
 
 describe("calculateVoteAverage", () => {
   it("calculates average using only numeric votes", () => {
@@ -15,5 +20,39 @@ describe("calculateVoteAverage", () => {
 
     expect(average).toBeNull();
     expect(formatVoteAverage(average)).toBe("-");
+  });
+
+  it("calculates averages for story points, complexity, and time", () => {
+    const averages = calculatePlanningAverages([
+      {
+        storyPoints: "3",
+        complexity: 2,
+        timeConsuming: 4,
+      },
+      {
+        storyPoints: "5",
+        complexity: 4,
+        timeConsuming: 5,
+      },
+      {
+        storyPoints: "?",
+        complexity: 3,
+        timeConsuming: 3,
+      },
+    ]);
+
+    expect(averages.storyPoints).toBeCloseTo(4, 2);
+    expect(averages.complexity).toBeCloseTo(3, 2);
+    expect(averages.timeConsuming).toBeCloseTo(4, 2);
+  });
+
+  it("derives a task mood from revealed averages", () => {
+    const mood = derivePlanningMood({
+      storyPoints: 8,
+      complexity: 4.2,
+      timeConsuming: 3.9,
+    });
+
+    expect(mood).toBe("Needs discussion");
   });
 });

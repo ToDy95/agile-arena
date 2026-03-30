@@ -23,7 +23,13 @@ import {
 } from "@/lib/liveblocks/room-context";
 import type { RetroNoteStorage } from "@/lib/liveblocks/types";
 import { normalizePlanningTaskInput } from "@/lib/schemas/planning";
-import type { PlanningVoteValue, RetroNote, RoomMode } from "@/lib/types/domain";
+import {
+  PLANNING_VOTE_VALUES,
+  type PlanningEstimate,
+  type PlanningMetricValue,
+  type RetroNote,
+  type RoomMode,
+} from "@/lib/types/domain";
 import { normalizeHexColor } from "@/lib/utils/color";
 import { extractJiraIssueKey } from "@/lib/utils/jira";
 
@@ -36,6 +42,55 @@ type RoomExperienceProps = {
 
 function resolvePlayerColor(color: string | undefined): string {
   return normalizeHexColor(color ?? "") ?? "#38BDF8";
+}
+
+function isPlanningMetricValue(value: unknown): value is PlanningMetricValue {
+  return typeof value === "number" && value >= 1 && value <= 5;
+}
+
+function isPlanningVoteValue(value: unknown): value is PlanningEstimate["storyPoints"] {
+  return (
+    typeof value === "string" &&
+    PLANNING_VOTE_VALUES.includes(value as (typeof PLANNING_VOTE_VALUES)[number])
+  );
+}
+
+function normalizePlanningEstimate(value: unknown): PlanningEstimate | null {
+  if (isPlanningVoteValue(value)) {
+    return {
+      storyPoints: value,
+      complexity: 3,
+      timeConsuming: 3,
+    };
+  }
+
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = value as {
+    storyPoints?: unknown;
+    complexity?: unknown;
+    timeConsuming?: unknown;
+    researchUnknowns?: unknown;
+  };
+
+  if (
+    !isPlanningVoteValue(candidate.storyPoints) ||
+    !isPlanningMetricValue(candidate.complexity) ||
+    !isPlanningMetricValue(candidate.timeConsuming)
+  ) {
+    return null;
+  }
+
+  return {
+    storyPoints: candidate.storyPoints,
+    complexity: candidate.complexity,
+    timeConsuming: candidate.timeConsuming,
+    researchUnknowns: isPlanningMetricValue(candidate.researchUnknowns)
+      ? candidate.researchUnknowns
+      : undefined,
+  };
 }
 
 function mapStatusLabel(status: string): string {
@@ -71,14 +126,23 @@ export function RoomExperience({
   const [myPresence] = useMyPresence();
   const updateMyPresence = useUpdateMyPresence();
 
-  const votes = useMemo(
-    () =>
-      (planning?.votes ?? new Map<string, PlanningVoteValue>()) as ReadonlyMap<
-        string,
-        PlanningVoteValue
-      >,
-    [planning?.votes],
-  );
+  const votes = useMemo(() => {
+    const normalizedVotes = new Map<string, PlanningEstimate>();
+
+    if (!planning?.votes) {
+      return normalizedVotes as ReadonlyMap<string, PlanningEstimate>;
+    }
+
+    planning.votes.forEach((value, userId) => {
+      const estimate = normalizePlanningEstimate(value);
+
+      if (estimate) {
+        normalizedVotes.set(userId, estimate);
+      }
+    });
+
+    return normalizedVotes as ReadonlyMap<string, PlanningEstimate>;
+  }, [planning?.votes]);
 
   const myVote = votes.get(currentUserId) ?? null;
   const storageReady = planning !== null && retroNotesMap !== null;
@@ -102,7 +166,7 @@ export function RoomExperience({
   }, []);
 
   const castVote = useMutation(
-    ({ storage, setMyPresence }, userId: string, vote: PlanningVoteValue) => {
+    ({ storage, setMyPresence }, userId: string, vote: PlanningEstimate) => {
       const planningRoot = storage.get("planning");
       planningRoot.get("votes").set(userId, vote);
       planningRoot.set("isRevealed", false);
@@ -123,6 +187,20 @@ export function RoomExperience({
       voteMap.delete(key);
     }
 
+    planningRoot.set("isRevealed", false);
+    setMyPresence({ hasVoted: false });
+  }, []);
+
+  const nextTask = useMutation(({ storage, setMyPresence }) => {
+    const planningRoot = storage.get("planning");
+    const voteMap = planningRoot.get("votes");
+
+    for (const key of voteMap.keys()) {
+      voteMap.delete(key);
+    }
+
+    planningRoot.set("taskInput", "");
+    planningRoot.set("issueKey", null);
     planningRoot.set("isRevealed", false);
     setMyPresence({ hasVoted: false });
   }, []);
@@ -342,6 +420,7 @@ export function RoomExperience({
               onRevealVotes={revealVotes}
               onResetRound={resetRound}
               onClearTask={clearTask}
+              onNextTask={nextTask}
             />
           </motion.div>
         ) : null}

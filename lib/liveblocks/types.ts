@@ -1,6 +1,6 @@
 import type { LiveMap, LiveObject } from "@liveblocks/client";
 
-import type { PlanningVoteValue, RetroColumn, RoomMode, RoomPresence } from "@/lib/types/domain";
+import type { PlanningEstimate, RetroColumn, RoomMode, RoomPresence } from "@/lib/types/domain";
 
 export type RoomUserInfo = {
   nickname: string;
@@ -16,7 +16,7 @@ export type PlanningStorage = LiveObject<{
   taskInput: string;
   issueKey: string | null;
   isRevealed: boolean;
-  votes: LiveMap<string, PlanningVoteValue>;
+  votes: LiveMap<string, PlanningEstimate>;
 }>;
 
 export type RetroNoteStorage = {

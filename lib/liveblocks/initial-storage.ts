@@ -1,6 +1,6 @@
 import { LiveMap, LiveObject } from "@liveblocks/client";
-import type { RoomStorage } from "@/lib/liveblocks/types";
-import type { RoomMode } from "@/lib/types/domain";
+import type { RetroNoteStorage, RoomStorage } from "@/lib/liveblocks/types";
+import type { PlanningEstimate, RoomMode } from "@/lib/types/domain";
 
 export function createInitialStorage(mode: RoomMode = "grooming"): RoomStorage {
   return {
@@ -9,10 +9,10 @@ export function createInitialStorage(mode: RoomMode = "grooming"): RoomStorage {
       taskInput: "",
       issueKey: null,
       isRevealed: false,
-      votes: new LiveMap(),
+      votes: new LiveMap<string, PlanningEstimate>(),
     }),
     retro: new LiveObject({
-      notes: new LiveMap(),
+      notes: new LiveMap<string, LiveObject<RetroNoteStorage>>(),
     }),
   };
 }

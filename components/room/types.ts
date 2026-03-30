@@ -1,4 +1,4 @@
-import type { PlanningVoteValue } from "@/lib/types/domain";
+import type { PlanningEstimate } from "@/lib/types/domain";
 
 export type RoomPlayer = {
   connectionId: number;
@@ -7,5 +7,5 @@ export type RoomPlayer = {
   color: string;
   isSelf: boolean;
   hasVoted: boolean;
-  vote: PlanningVoteValue | null;
+  vote: PlanningEstimate | null;
 };

@@ -20,6 +20,17 @@ export const PLANNING_VOTE_VALUES = [
 
 export type PlanningVoteValue = (typeof PLANNING_VOTE_VALUES)[number];
 
+export const PLANNING_METRIC_VALUES = [1, 2, 3, 4, 5] as const;
+
+export type PlanningMetricValue = (typeof PLANNING_METRIC_VALUES)[number];
+
+export type PlanningEstimate = {
+  storyPoints: PlanningVoteValue;
+  complexity: PlanningMetricValue;
+  timeConsuming: PlanningMetricValue;
+  researchUnknowns?: PlanningMetricValue;
+};
+
 export const RETRO_COLUMNS = ["wentWell", "toImprove", "actionItems"] as const;
 
 export type RetroColumn = (typeof RETRO_COLUMNS)[number];
@@ -43,7 +54,7 @@ export type PlanningTask = {
 export type PlanningRoomState = {
   task: PlanningTask;
   isRevealed: boolean;
-  votes: Record<string, PlanningVoteValue>;
+  votes: Record<string, PlanningEstimate>;
 };
 
 export type RetroNoteVoteMap = Record<string, true>;
