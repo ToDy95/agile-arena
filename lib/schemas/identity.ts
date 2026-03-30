@@ -18,4 +18,5 @@ export const storedIdentitySchema = z.object({
   userId: z.string().trim().min(1).max(120),
   nickname: z.string().trim().max(MAX_NICKNAME_LENGTH),
   color: z.string().trim().min(1).max(32),
+  avatar: z.unknown().optional(),
 });

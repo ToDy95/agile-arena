@@ -12,6 +12,8 @@ import type { RoomPlayer } from "@/components/room/types";
 import { Card } from "@/components/ui/card";
 import { useMotionPreferences } from "@/hooks/use-motion-preferences";
 import { getItemRevealVariants, getModeSwapVariants } from "@/lib/animations/presets";
+import type { AvatarConfig } from "@/lib/avatar/avatar-types";
+import { createDefaultAvatarConfig, normalizeAvatarConfig } from "@/lib/avatar/avatar-utils";
 import {
   buildSessionExportCsv,
   createSessionExportFilename,
@@ -45,6 +47,7 @@ type RoomExperienceProps = {
   currentUserId: string;
   currentNickname: string;
   currentColor: string;
+  currentAvatar: AvatarConfig;
   onLeaveRoom: () => void;
   onResetIdentity: () => void;
   onLocalReset: () => void;
@@ -154,6 +157,7 @@ export function RoomExperience({
   currentUserId,
   currentNickname,
   currentColor,
+  currentAvatar,
   onLeaveRoom,
   onResetIdentity,
   onLocalReset,
@@ -591,6 +595,7 @@ export function RoomExperience({
         const userId = user.presence.userId || user.id;
         const nickname = user.presence.nickname || user.info?.nickname || "Player";
         const color = resolvePlayerColor(user.presence.color || user.info?.color);
+        const avatar = normalizeAvatarConfig(user.presence.avatar ?? createDefaultAvatarConfig());
         const vote = votes.get(userId) ?? null;
 
         return {
@@ -598,6 +603,7 @@ export function RoomExperience({
           userId,
           nickname,
           color,
+          avatar,
           isSelf: self ? user.connectionId === self.connectionId : false,
           isOwner: roomOwnerId === userId,
           hasVoted: vote !== null,
@@ -730,6 +736,7 @@ export function RoomExperience({
     <motion.div layout className="space-y-4 overflow-x-clip">
       <RoomHeader
         roomId={roomId}
+        currentAvatar={currentAvatar}
         status={mapStatusLabel(status)}
         roomOwnerName={roomOwnerName}
         isCurrentUserOwner={isOwner}

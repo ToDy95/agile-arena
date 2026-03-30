@@ -28,9 +28,7 @@ export function useLocalIdentity() {
     const storedIdentity = readIdentity();
     const resolvedIdentity = storedIdentity ?? createDefaultIdentity();
 
-    if (!storedIdentity) {
-      writeIdentity(resolvedIdentity);
-    }
+    writeIdentity(resolvedIdentity);
 
     // Hydrate browser-only identity state from localStorage after mount.
     setIdentity({

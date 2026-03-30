@@ -88,10 +88,17 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
             roomIdFromUrl={roomId}
             initialNickname={identity.nickname}
             initialColor={resolvedColor}
-            onJoin={({ nickname: nextNickname, color: nextColor, roomId: nextRoomId }) => {
+            initialAvatar={identity.avatar}
+            onJoin={({
+              nickname: nextNickname,
+              color: nextColor,
+              avatar: nextAvatar,
+              roomId: nextRoomId,
+            }) => {
               updateIdentity({
                 nickname: nextNickname,
                 color: nextColor,
+                avatar: nextAvatar,
               });
               rememberRoomId(nextRoomId);
 
@@ -120,6 +127,7 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
             userId: identity.userId,
             nickname,
             color: resolvedColor,
+            avatar: identity.avatar,
             mode: "grooming",
             hasVoted: false,
           }}
@@ -130,6 +138,7 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
             currentUserId={identity.userId}
             currentNickname={nickname}
             currentColor={resolvedColor}
+            currentAvatar={identity.avatar}
             onLeaveRoom={leaveRoom}
             onResetIdentity={handleResetIdentity}
             onLocalReset={handleLocalReset}

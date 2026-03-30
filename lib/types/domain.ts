@@ -1,3 +1,5 @@
+import type { AvatarConfig } from "@/lib/avatar/avatar-types";
+
 export const ROOM_MODES = ["grooming", "retro"] as const;
 
 export type RoomMode = (typeof ROOM_MODES)[number];
@@ -45,6 +47,7 @@ export type UserIdentity = {
   userId: string;
   nickname: string;
   color: string;
+  avatar: AvatarConfig;
 };
 
 export type RoomPresence = UserIdentity & {

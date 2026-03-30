@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { AvatarBadge } from "@/components/avatar/avatar-badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,10 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { useMotionPreferences } from "@/hooks/use-motion-preferences";
 import { getItemRevealVariants, motionTransitions } from "@/lib/animations/presets";
+import type { AvatarConfig } from "@/lib/avatar/avatar-types";
 import { APP_NAME } from "@/lib/constants/app";
 
 type RoomHeaderProps = {
   roomId: string;
+  currentAvatar: AvatarConfig;
   status: string;
   roomOwnerName: string;
   isCurrentUserOwner: boolean;
@@ -31,6 +34,7 @@ type RoomHeaderProps = {
 
 export function RoomHeader({
   roomId,
+  currentAvatar,
   status,
   roomOwnerName,
   isCurrentUserOwner,
@@ -73,17 +77,24 @@ export function RoomHeader({
       initial="hidden"
       animate="show"
       variants={revealVariants}
-      className="flex flex-col gap-4 rounded-2xl border border-border/75 bg-card/90 p-4 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between"
+      className="flex flex-col gap-4 rounded-2xl border border-border/75 bg-card/90 p-4 backdrop-blur-sm lg:flex-row lg:items-center lg:justify-between"
     >
-      <div className="space-y-1">
-        <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{APP_NAME}</p>
-        <h1 className="text-lg font-semibold text-foreground sm:text-xl">Room {roomId}</h1>
-        <p className="text-xs text-muted-foreground">
-          Owner: <span className="font-semibold text-foreground">{roomOwnerName}</span>
-        </p>
+      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+        <AvatarBadge config={currentAvatar} className="shrink-0" />
+        <div className="min-w-0 space-y-1">
+          <p className="truncate text-xs uppercase tracking-[0.22em] text-muted-foreground">
+            {APP_NAME}
+          </p>
+          <h1 className="truncate text-lg font-semibold text-foreground sm:text-xl">
+            Room {roomId}
+          </h1>
+          <p className="truncate text-xs text-muted-foreground">
+            Owner: <span className="font-semibold text-foreground">{roomOwnerName}</span>
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
         <ThemeToggle className="max-w-full" />
         {isCurrentUserOwner ? <Badge variant="secondary">Owner controls</Badge> : null}
         <AnimatePresence mode="wait" initial={false}>

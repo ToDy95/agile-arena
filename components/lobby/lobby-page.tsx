@@ -3,9 +3,20 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AvatarEditor } from "@/components/avatar/avatar-editor";
+import { AvatarPreview } from "@/components/avatar/avatar-preview";
+import { AvatarRandomizeButton } from "@/components/avatar/avatar-randomize-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useLocalIdentity } from "@/hooks/use-local-identity";
 import { useMotionPreferences } from "@/hooks/use-motion-preferences";
@@ -15,6 +26,7 @@ import {
   getItemRevealVariants,
   getPageEnterVariants,
 } from "@/lib/animations/presets";
+import { generateRandomAvatarConfig } from "@/lib/avatar/avatar-randomizer";
 import { APP_NAME, APP_SUBTITLE } from "@/lib/constants/app";
 import { roomIdSchema } from "@/lib/schemas/room";
 import { generateRandomColor, normalizeHexColor } from "@/lib/utils/color";
@@ -32,6 +44,7 @@ export function LobbyPage() {
 
   const [roomIdInput, setRoomIdInput] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [avatarEditorOpen, setAvatarEditorOpen] = useState(false);
 
   const pageVariants = getPageEnterVariants(reducedMotion);
   const containerVariants = getContainerStaggerVariants(reducedMotion);
@@ -56,6 +69,7 @@ export function LobbyPage() {
     const parsedIdentity = resolveJoinIdentity({
       nickname: identity.nickname,
       color: identity.color,
+      avatar: identity.avatar,
     });
 
     if (!parsedIdentity.success) {
@@ -66,6 +80,7 @@ export function LobbyPage() {
     updateIdentity({
       nickname: parsedIdentity.data.nickname,
       color: parsedIdentity.data.color,
+      avatar: parsedIdentity.data.avatar,
     });
 
     setErrorMessage(null);
@@ -200,6 +215,51 @@ export function LobbyPage() {
                 <p className="text-xs text-muted-foreground">
                   Share the room ID with your team, or create a fresh arena.
                 </p>
+              </motion.div>
+
+              <motion.div variants={itemVariants} className="space-y-2">
+                <p className="text-sm font-medium text-foreground/90">Avatar</p>
+                <div className="flex items-center gap-3 rounded-xl border border-border/75 bg-surface-1/70 p-2.5">
+                  <AvatarPreview config={identity.avatar} size="sm" />
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      <AvatarRandomizeButton
+                        onClick={() =>
+                          updateIdentity({
+                            avatar: generateRandomAvatarConfig(),
+                          })
+                        }
+                      />
+                      <Dialog open={avatarEditorOpen} onOpenChange={setAvatarEditorOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            Customize
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>Avatar Workshop</DialogTitle>
+                            <DialogDescription>
+                              Tune your look. Your avatar is saved locally on this browser.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <AvatarEditor
+                            value={identity.avatar}
+                            onChange={(avatar) => updateIdentity({ avatar })}
+                            onRandomize={() =>
+                              updateIdentity({
+                                avatar: generateRandomAvatarConfig(),
+                              })
+                            }
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Personalize your lobby character before entering the room.
+                    </p>
+                  </div>
+                </div>
               </motion.div>
 
               <AnimatePresence initial={false} mode="popLayout">

@@ -4,8 +4,19 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { AvatarEditor } from "@/components/avatar/avatar-editor";
+import { AvatarPreview } from "@/components/avatar/avatar-preview";
+import { AvatarRandomizeButton } from "@/components/avatar/avatar-randomize-button";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useMotionPreferences } from "@/hooks/use-motion-preferences";
 import {
@@ -13,6 +24,8 @@ import {
   getContainerStaggerVariants,
   getItemRevealVariants,
 } from "@/lib/animations/presets";
+import { generateRandomAvatarConfig } from "@/lib/avatar/avatar-randomizer";
+import type { AvatarConfig } from "@/lib/avatar/avatar-types";
 import { roomIdSchema } from "@/lib/schemas/room";
 import { generateRandomColor, normalizeHexColor } from "@/lib/utils/color";
 import { resolveJoinIdentity } from "@/lib/utils/identity";
@@ -20,6 +33,7 @@ import { resolveJoinIdentity } from "@/lib/utils/identity";
 type JoinRoomPayload = {
   nickname: string;
   color: string;
+  avatar: AvatarConfig;
   roomId: string;
 };
 
@@ -27,6 +41,7 @@ type JoinRoomFormProps = {
   roomIdFromUrl: string;
   initialNickname: string;
   initialColor: string;
+  initialAvatar: AvatarConfig;
   onJoin: (payload: JoinRoomPayload) => void;
 };
 
@@ -34,6 +49,7 @@ export function JoinRoomForm({
   roomIdFromUrl,
   initialNickname,
   initialColor,
+  initialAvatar,
   onJoin,
 }: JoinRoomFormProps) {
   const { reducedMotion } = useMotionPreferences();
@@ -46,7 +62,9 @@ export function JoinRoomForm({
   const [colorInput, setColorInput] = useState(
     normalizeHexColor(initialColor) ?? generateRandomColor(initialColor),
   );
+  const [avatarInput, setAvatarInput] = useState(initialAvatar);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [avatarEditorOpen, setAvatarEditorOpen] = useState(false);
 
   useEffect(() => {
     setRoomIdInput(roomIdFromUrl);
@@ -56,6 +74,7 @@ export function JoinRoomForm({
     const parsedIdentity = resolveJoinIdentity({
       nickname: nicknameInput,
       color: colorInput,
+      avatar: avatarInput,
     });
 
     if (!parsedIdentity.success) {
@@ -77,6 +96,7 @@ export function JoinRoomForm({
     onJoin({
       nickname: parsedIdentity.data.nickname,
       color: parsedIdentity.data.color,
+      avatar: parsedIdentity.data.avatar,
       roomId: parsedRoomId.data,
     });
   };
@@ -162,6 +182,43 @@ export function JoinRoomForm({
               <p className="text-xs text-muted-foreground">
                 Invite links prefill this value. You can still switch to a different room.
               </p>
+            </motion.div>
+
+            <motion.div variants={itemReveal} className="space-y-2">
+              <p className="text-sm font-medium text-foreground/90">Avatar</p>
+              <div className="flex items-center gap-3 rounded-xl border border-border/75 bg-surface-1/70 p-2.5">
+                <AvatarPreview config={avatarInput} size="sm" />
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <AvatarRandomizeButton
+                      onClick={() => setAvatarInput(generateRandomAvatarConfig())}
+                    />
+                    <Dialog open={avatarEditorOpen} onOpenChange={setAvatarEditorOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          Customize
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+                        <DialogHeader>
+                          <DialogTitle>Avatar Workshop</DialogTitle>
+                          <DialogDescription>
+                            Configure your avatar for this browser profile.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <AvatarEditor
+                          value={avatarInput}
+                          onChange={setAvatarInput}
+                          onRandomize={() => setAvatarInput(generateRandomAvatarConfig())}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Saved locally and ready for future multiplayer avatar views.
+                  </p>
+                </div>
+              </div>
             </motion.div>
 
             <AnimatePresence initial={false} mode="popLayout">
