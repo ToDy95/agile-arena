@@ -6,7 +6,6 @@ import type {
   RetroNoteStatus,
   RoomMode,
   RoomPresence,
-  RoomSettings,
 } from "@/lib/types/domain";
 
 export type RoomUserInfo = {
@@ -30,8 +29,9 @@ export type RetroNoteStorage = {
   id: string;
   text: string;
   authorId: string;
-  authorNickname: string;
+  authorName: string;
   authorColor: string;
+  isAnonymous: boolean;
   column: RetroColumn;
   status: RetroNoteStatus;
   createdAt: number;
@@ -46,7 +46,6 @@ export type RetroStorage = LiveObject<{
 
 export type RoomStorage = {
   roomOwnerId: string | null;
-  settings: LiveObject<RoomSettings>;
   mode: RoomMode;
   planning: PlanningStorage;
   retro: RetroStorage;

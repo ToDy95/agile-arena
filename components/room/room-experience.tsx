@@ -125,7 +125,6 @@ export function RoomExperience({
   const status = useStatus();
   const roomMode = useStorage((root) => root.mode) ?? "grooming";
   const roomOwnerId = useStorage((root) => root.roomOwnerId) ?? null;
-  const retroAnonymousMode = useStorage((root) => root.settings?.retroAnonymousMode) ?? false;
   const sessionNotes = useStorage((root) => root.retro.sessionNotes) ?? "";
   const planning = useStorage((root) => root.planning);
   const retroNotesMap = useStorage((root) => root.retro.notes);
@@ -166,15 +165,6 @@ export function RoomExperience({
       storage.set("roomOwnerId", userId);
     }
 
-    let settings = storage.get("settings");
-
-    if (!settings) {
-      settings = new LiveObject({
-        retroAnonymousMode: false,
-      });
-      storage.set("settings", settings);
-    }
-
     const retroRoot = storage.get("retro");
     const notesMap = retroRoot.get("notes");
 
@@ -185,6 +175,14 @@ export function RoomExperience({
     notesMap.forEach((note) => {
       if (note.get("status") === undefined) {
         note.set("status", "open");
+      }
+
+      if (note.get("isAnonymous") === undefined) {
+        note.set("isAnonymous", true);
+      }
+
+      if (note.get("authorName") === undefined) {
+        note.set("authorName", "Player");
       }
     });
   }, []);
@@ -258,26 +256,6 @@ export function RoomExperience({
     setMyPresence({ hasVoted: false });
   }, []);
 
-  const setRetroAnonymousMode = useMutation(
-    ({ storage }, payload: { userId: string; enabled: boolean }) => {
-      if (storage.get("roomOwnerId") !== payload.userId) {
-        return;
-      }
-
-      let settings = storage.get("settings");
-
-      if (!settings) {
-        settings = new LiveObject({
-          retroAnonymousMode: false,
-        });
-        storage.set("settings", settings);
-      }
-
-      settings.set("retroAnonymousMode", payload.enabled);
-    },
-    [],
-  );
-
   const updateSessionNotes = useMutation(
     ({ storage }, payload: { userId: string; value: string }) => {
       if (storage.get("roomOwnerId") !== payload.userId) {
@@ -295,8 +273,9 @@ export function RoomExperience({
       note: {
         text: string;
         column: RetroNote["column"];
+        isAnonymous: boolean;
         authorId: string;
-        authorNickname: string;
+        authorName: string;
         authorColor: string;
       },
     ) => {
@@ -311,8 +290,9 @@ export function RoomExperience({
           text: note.text,
           column: note.column,
           status: "open",
+          isAnonymous: note.isAnonymous,
           authorId: note.authorId,
-          authorNickname: note.authorNickname,
+          authorName: note.authorName,
           authorColor: note.authorColor,
           createdAt: now,
           updatedAt: now,
@@ -452,6 +432,11 @@ export function RoomExperience({
       .map((note) => {
         const upvotes: RetroNote["upvotes"] = {};
         const status: RetroNote["status"] = note.status === "solved" ? "solved" : "open";
+        const isAnonymous = note.isAnonymous !== false;
+        const authorName =
+          typeof note.authorName === "string" && note.authorName.trim().length > 0
+            ? note.authorName
+            : "Player";
 
         note.upvotes.forEach((isUpvoted, userId) => {
           if (isUpvoted) {
@@ -463,8 +448,9 @@ export function RoomExperience({
           id: note.id,
           text: note.text,
           authorId: note.authorId,
-          authorNickname: note.authorNickname,
+          authorName,
           authorColor: note.authorColor,
+          isAnonymous,
           column: note.column,
           createdAt: note.createdAt,
           updatedAt: note.updatedAt,
@@ -511,7 +497,6 @@ export function RoomExperience({
         })),
       },
       retro: {
-        anonymousMode: retroAnonymousMode,
         sessionNotes,
         notes: retroNotes,
       },
@@ -612,14 +597,14 @@ export function RoomExperience({
               notes={retroNotes}
               currentUserId={currentUserId}
               isOwner={isOwner}
-              anonymousMode={retroAnonymousMode}
               sessionNotes={sessionNotes}
-              onAddNote={(column, text) =>
+              onAddNote={(column, text, isAnonymous) =>
                 addRetroNote({
                   text,
                   column,
+                  isAnonymous,
                   authorId: currentUserId,
-                  authorNickname: currentNickname,
+                  authorName: currentNickname,
                   authorColor: currentColor,
                 })
               }
@@ -647,12 +632,6 @@ export function RoomExperience({
                   noteId,
                   userId: currentUserId,
                   solved,
-                })
-              }
-              onSetAnonymousMode={(enabled) =>
-                setRetroAnonymousMode({
-                  userId: currentUserId,
-                  enabled,
                 })
               }
               onUpdateSessionNotes={(value) =>

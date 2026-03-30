@@ -5,9 +5,6 @@ import type { PlanningEstimate, RoomMode } from "@/lib/types/domain";
 export function createInitialStorage(mode: RoomMode = "grooming"): RoomStorage {
   return {
     roomOwnerId: null,
-    settings: new LiveObject({
-      retroAnonymousMode: false,
-    }),
     mode,
     planning: new LiveObject({
       taskInput: "",

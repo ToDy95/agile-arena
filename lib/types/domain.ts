@@ -31,10 +31,6 @@ export type PlanningEstimate = {
   researchUnknowns?: PlanningMetricValue;
 };
 
-export type RoomSettings = {
-  retroAnonymousMode: boolean;
-};
-
 export const RETRO_COLUMNS = ["wentWell", "toImprove", "actionItems"] as const;
 
 export type RetroColumn = (typeof RETRO_COLUMNS)[number];
@@ -71,8 +67,9 @@ export type RetroNote = {
   id: string;
   text: string;
   authorId: string;
-  authorNickname: string;
+  authorName: string;
   authorColor: string;
+  isAnonymous: boolean;
   column: RetroColumn;
   createdAt: number;
   updatedAt: number;

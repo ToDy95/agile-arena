@@ -22,14 +22,12 @@ type RetroModeProps = {
   notes: RetroNote[];
   currentUserId: string;
   isOwner: boolean;
-  anonymousMode: boolean;
   sessionNotes: string;
-  onAddNote: (column: RetroColumn, text: string) => void;
+  onAddNote: (column: RetroColumn, text: string, isAnonymous: boolean) => void;
   onEditNote: (noteId: string, text: string) => void;
   onDeleteNote: (noteId: string) => void;
   onToggleUpvote: (noteId: string) => void;
   onToggleSolved: (noteId: string, solved: boolean) => void;
-  onSetAnonymousMode: (enabled: boolean) => void;
   onUpdateSessionNotes: (value: string) => void;
 };
 
@@ -38,12 +36,13 @@ type RetroColumnLaneProps = {
   notes: RetroNote[];
   currentUserId: string;
   isOwner: boolean;
-  anonymousMode: boolean;
   draftText: string;
+  anonymousChecked: boolean;
   composerOpen: boolean;
   editingNoteId: string | null;
   editingText: string;
   onDraftChange: (column: RetroColumn, value: string) => void;
+  onAnonymousChange: (column: RetroColumn, value: boolean) => void;
   onToggleComposer: (column: RetroColumn, open: boolean) => void;
   onSubmitDraft: (column: RetroColumn) => void;
   onStartEdit: (noteId: string, text: string) => void;
@@ -60,12 +59,13 @@ function RetroColumnLane({
   notes,
   currentUserId,
   isOwner,
-  anonymousMode,
   draftText,
+  anonymousChecked,
   composerOpen,
   editingNoteId,
   editingText,
   onDraftChange,
+  onAnonymousChange,
   onToggleComposer,
   onSubmitDraft,
   onStartEdit,
@@ -125,6 +125,18 @@ function RetroColumnLane({
                 }
               }}
             />
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border/70 bg-surface-1 accent-primary"
+                checked={anonymousChecked}
+                onChange={(event) => onAnonymousChange(column, event.target.checked)}
+              />
+              Post anonymously
+            </label>
+            <p className="text-[11px] text-muted-foreground/90">
+              Your name will not be visible to others.
+            </p>
             <div className="flex justify-end gap-2">
               <Button size="sm" variant="ghost" onClick={() => onToggleComposer(column, false)}>
                 Cancel
@@ -154,7 +166,7 @@ function RetroColumnLane({
           const voteCount = Object.keys(note.upvotes).length;
           const hasUpvoted = Boolean(note.upvotes[currentUserId]);
           const isSolved = note.status === "solved";
-          const authorLabel = anonymousMode ? "Anonymous" : note.authorNickname;
+          const authorLabel = note.isAnonymous ? "Anonymous" : note.authorName;
 
           return (
             <motion.div
@@ -169,7 +181,7 @@ function RetroColumnLane({
               <div className="mb-2 flex items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">
-                    <span style={{ color: anonymousMode ? undefined : note.authorColor }}>
+                    <span style={{ color: note.isAnonymous ? undefined : note.authorColor }}>
                       {authorLabel}
                     </span>
                   </p>
@@ -282,14 +294,12 @@ export function RetroMode({
   notes,
   currentUserId,
   isOwner,
-  anonymousMode,
   sessionNotes,
   onAddNote,
   onDeleteNote,
   onEditNote,
   onToggleUpvote,
   onToggleSolved,
-  onSetAnonymousMode,
   onUpdateSessionNotes,
 }: RetroModeProps) {
   const { reducedMotion } = useMotionPreferences();
@@ -305,6 +315,11 @@ export function RetroMode({
     wentWell: false,
     toImprove: false,
     actionItems: false,
+  });
+  const [draftAnonymous, setDraftAnonymous] = useState<Record<RetroColumn, boolean>>({
+    wentWell: true,
+    toImprove: true,
+    actionItems: true,
   });
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
@@ -335,8 +350,9 @@ export function RetroMode({
       return;
     }
 
-    onAddNote(column, trimmed);
+    onAddNote(column, trimmed, draftAnonymous[column]);
     setDrafts((current) => ({ ...current, [column]: "" }));
+    setDraftAnonymous((current) => ({ ...current, [column]: true }));
     setComposerOpen((current) => ({ ...current, [column]: false }));
   };
 
@@ -366,29 +382,15 @@ export function RetroMode({
       <motion.div variants={itemReveal}>
         <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Retro Controls
-            </p>
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Retro Board</p>
             <p className="text-sm text-foreground/90">
               {solvedCount}/{notes.length} topics solved
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs text-muted-foreground">
-              Anonymous mode:{" "}
-              <span className="font-semibold text-foreground">{anonymousMode ? "On" : "Off"}</span>
+              Each note can be posted anonymously. New notes default to anonymous.
             </p>
-            {isOwner ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onSetAnonymousMode(!anonymousMode)}
-              >
-                {anonymousMode ? "Disable anonymous" : "Enable anonymous"}
-              </Button>
-            ) : (
-              <p className="text-xs text-muted-foreground">Owner controls this setting.</p>
-            )}
           </div>
         </Card>
       </motion.div>
@@ -401,13 +403,19 @@ export function RetroMode({
               notes={notesByColumn[column]}
               currentUserId={currentUserId}
               isOwner={isOwner}
-              anonymousMode={anonymousMode}
               draftText={drafts[column]}
+              anonymousChecked={draftAnonymous[column]}
               composerOpen={composerOpen[column]}
               editingNoteId={editingNoteId}
               editingText={editingText}
               onDraftChange={(nextColumn, value) =>
                 setDrafts((current) => ({
+                  ...current,
+                  [nextColumn]: value,
+                }))
+              }
+              onAnonymousChange={(nextColumn, value) =>
+                setDraftAnonymous((current) => ({
                   ...current,
                   [nextColumn]: value,
                 }))

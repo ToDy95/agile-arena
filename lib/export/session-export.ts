@@ -24,7 +24,6 @@ export type SessionExportSnapshot = {
     players: SessionExportPlayer[];
   };
   retro: {
-    anonymousMode: boolean;
     sessionNotes: string;
     notes: RetroNote[];
   };
@@ -48,12 +47,12 @@ const EXPORT_COLUMNS = [
   "participantStoryPoints",
   "participantComplexity",
   "participantTimeConsuming",
-  "retroAnonymousMode",
   "sessionNotes",
   "noteId",
   "noteColumn",
   "noteText",
   "noteStatus",
+  "noteIsAnonymous",
   "noteUpvotes",
   "noteAuthor",
   "noteCreatedAt",
@@ -133,7 +132,6 @@ export function buildSessionExportCsv(snapshot: SessionExportSnapshot): string {
     roomId: snapshot.roomId,
     roomOwner: snapshot.roomOwnerName,
     exportedAt: toIso(snapshot.exportedAt),
-    retroAnonymousMode: snapshot.retro.anonymousMode,
     sessionNotes: snapshot.retro.sessionNotes,
     actionItems,
   });
@@ -145,14 +143,14 @@ export function buildSessionExportCsv(snapshot: SessionExportSnapshot): string {
       roomId: snapshot.roomId,
       roomOwner: snapshot.roomOwnerName,
       exportedAt: toIso(snapshot.exportedAt),
-      retroAnonymousMode: snapshot.retro.anonymousMode,
       sessionNotes: snapshot.retro.sessionNotes,
       noteId: note.id,
       noteColumn: note.column,
       noteText: note.text,
       noteStatus: note.status,
+      noteIsAnonymous: note.isAnonymous,
       noteUpvotes: Object.keys(note.upvotes).length,
-      noteAuthor: note.authorNickname,
+      noteAuthor: note.authorName,
       noteCreatedAt: toIso(note.createdAt),
       noteUpdatedAt: toIso(note.updatedAt),
       actionItems,
