@@ -26,7 +26,7 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,cjs,mjs,json,jsonc,css,md}": "biome check --write --files-ignore-unknown=true"
+    "*.{ts,tsx,js,jsx,cjs,mjs,json,jsonc,css,md}": "biome check --write --files-ignore-unknown=true --no-errors-on-unmatched"
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.9.0",
