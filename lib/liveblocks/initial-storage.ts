@@ -10,6 +10,8 @@ export function createInitialStorage(mode: RoomMode = "grooming"): RoomStorage {
       taskInput: "",
       issueKey: null,
       isRevealed: false,
+      facilitatorParticipates: false,
+      manualFinalEstimate: null,
       votes: new LiveMap<string, PlanningEstimate>(),
     }),
     retro: new LiveObject({

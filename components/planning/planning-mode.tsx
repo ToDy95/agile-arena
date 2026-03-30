@@ -18,12 +18,20 @@ import {
   motionTransitions,
 } from "@/lib/animations/presets";
 import { PLANNING_DECK } from "@/lib/constants/planning";
-import type { PlanningEstimate, PlanningMetricValue, PlanningVoteValue } from "@/lib/types/domain";
+import type {
+  PlanningEstimate,
+  PlanningFinalEstimateValue,
+  PlanningMetricValue,
+  PlanningVoteValue,
+} from "@/lib/types/domain";
 import { cn } from "@/lib/utils/cn";
 import {
   calculatePlanningAverages,
+  calculateStoryPointSummary,
   derivePlanningMood,
   formatVoteAverage,
+  getStoryPointInterpretation,
+  resolveFinalEstimate,
 } from "@/lib/utils/votes";
 
 type PlanningModeProps = {
@@ -35,6 +43,8 @@ type PlanningModeProps = {
   myVote: PlanningEstimate | null;
   canManageRound: boolean;
   isCurrentUserFacilitator: boolean;
+  facilitatorParticipates: boolean;
+  manualFinalEstimate: PlanningFinalEstimateValue | null;
   disabled?: boolean;
   onTaskChange: (value: string) => void;
   onVoteSelect: (value: PlanningEstimate) => void;
@@ -42,6 +52,8 @@ type PlanningModeProps = {
   onResetRound: () => void;
   onClearTask: () => void;
   onNextTask: () => void;
+  onFacilitatorParticipationChange: (value: boolean) => void;
+  onManualFinalEstimateChange: (value: PlanningFinalEstimateValue | null) => void;
 };
 
 const DEFAULT_COMPLEXITY: PlanningMetricValue = 3;
@@ -56,6 +68,8 @@ export function PlanningMode({
   myVote,
   canManageRound,
   isCurrentUserFacilitator,
+  facilitatorParticipates,
+  manualFinalEstimate,
   disabled = false,
   onTaskChange,
   onVoteSelect,
@@ -63,6 +77,8 @@ export function PlanningMode({
   onResetRound,
   onClearTask,
   onNextTask,
+  onFacilitatorParticipationChange,
+  onManualFinalEstimateChange,
 }: PlanningModeProps) {
   const { reducedMotion } = useMotionPreferences();
   const cardInteraction = getCardInteractionProps(reducedMotion);
@@ -89,43 +105,67 @@ export function PlanningMode({
     }
   }, [myVote]);
 
-  const estimatingPlayers = useMemo(() => players.filter((player) => !player.isOwner), [players]);
-
+  const estimatingPlayers = useMemo(
+    () => players.filter((player) => !player.isOwner || facilitatorParticipates),
+    [facilitatorParticipates, players],
+  );
   const estimatorIds = useMemo(
     () => new Set(estimatingPlayers.map((player) => player.userId)),
     [estimatingPlayers],
   );
   const estimatorCount = estimatingPlayers.length;
-
   const votedCount = useMemo(
     () => estimatingPlayers.filter((player) => votes.has(player.userId)).length,
     [estimatingPlayers, votes],
   );
 
-  const planningAverages = useMemo(() => {
-    const relevantVotes = Array.from(votes.entries())
-      .filter(([userId]) => estimatorIds.has(userId))
-      .map(([, estimate]) => estimate);
-
-    return calculatePlanningAverages(relevantVotes);
-  }, [estimatorIds, votes]);
-
-  const storyPointsAverageLabel = useMemo(
-    () => formatVoteAverage(planningAverages.storyPoints),
-    [planningAverages.storyPoints],
+  const revealedVotes = useMemo(
+    () =>
+      Array.from(votes.entries())
+        .filter(([userId]) => estimatorIds.has(userId))
+        .map(([, estimate]) => estimate),
+    [estimatorIds, votes],
+  );
+  const planningAverages = useMemo(() => calculatePlanningAverages(revealedVotes), [revealedVotes]);
+  const storyPointSummary = useMemo(
+    () => calculateStoryPointSummary(revealedVotes.map((estimate) => estimate.storyPoints)),
+    [revealedVotes],
   );
 
+  const storyPointAverageLabel = useMemo(
+    () => formatVoteAverage(storyPointSummary.average),
+    [storyPointSummary.average],
+  );
+  const storyPointLowerLabel =
+    storyPointSummary.lowerBound === null ? "-" : String(storyPointSummary.lowerBound);
+  const storyPointUpperLabel =
+    storyPointSummary.upperBound === null ? "-" : String(storyPointSummary.upperBound);
   const complexityAverageLabel = useMemo(
     () => formatVoteAverage(planningAverages.complexity),
     [planningAverages.complexity],
   );
-
   const timeAverageLabel = useMemo(
     () => formatVoteAverage(planningAverages.timeConsuming),
     [planningAverages.timeConsuming],
   );
-
   const moodLabel = useMemo(() => derivePlanningMood(planningAverages), [planningAverages]);
+
+  const resolvedFinalEstimate = useMemo(
+    () => resolveFinalEstimate(storyPointSummary.suggestedEstimate, manualFinalEstimate),
+    [manualFinalEstimate, storyPointSummary.suggestedEstimate],
+  );
+  const interpretation = useMemo(
+    () => getStoryPointInterpretation(isRevealed ? resolvedFinalEstimate : null),
+    [isRevealed, resolvedFinalEstimate],
+  );
+  const taskLabel = useMemo(() => {
+    if (issueKey) {
+      return issueKey;
+    }
+
+    const trimmed = taskInput.trim();
+    return trimmed.length > 0 ? trimmed : "No task selected";
+  }, [issueKey, taskInput]);
 
   const statusLabel = isRevealed
     ? "Revealed"
@@ -141,16 +181,11 @@ export function PlanningMode({
     estimatorCount > 0 &&
     (votedCount === estimatorCount || votedCount >= Math.ceil(estimatorCount * 0.8));
 
-  const handleStoryPointSelect = (storyPoints: PlanningVoteValue) => {
-    if (isCurrentUserFacilitator) {
-      onVoteSelect({
-        storyPoints: "taco",
-        complexity: null,
-        timeConsuming: null,
-      });
-      return;
-    }
+  const showFacilitatorPassMode = isCurrentUserFacilitator && !facilitatorParticipates;
+  const showVoteInputs = !showFacilitatorPassMode;
+  const hideSecondaryMetrics = !showVoteInputs || myVote?.storyPoints === "taco";
 
+  const handleStoryPointSelect = (storyPoints: PlanningVoteValue) => {
     const isPass = storyPoints === "taco";
 
     onVoteSelect({
@@ -163,7 +198,7 @@ export function PlanningMode({
   const handleComplexityChange = (value: PlanningMetricValue) => {
     setComplexityVote(value);
 
-    if (!myVote || isRevealed) {
+    if (!myVote || isRevealed || myVote.storyPoints === "taco") {
       return;
     }
 
@@ -177,7 +212,7 @@ export function PlanningMode({
   const handleTimeChange = (value: PlanningMetricValue) => {
     setTimeVote(value);
 
-    if (!myVote || isRevealed) {
+    if (!myVote || isRevealed || myVote.storyPoints === "taco") {
       return;
     }
 
@@ -252,10 +287,21 @@ export function PlanningMode({
             </p>
             <PlanningSummary
               isRevealed={isRevealed}
-              storyPointsAverageLabel={storyPointsAverageLabel}
+              taskLabel={taskLabel}
+              storyPointLowerLabel={storyPointLowerLabel}
+              storyPointAverageLabel={storyPointAverageLabel}
+              storyPointUpperLabel={storyPointUpperLabel}
+              suggestedEstimate={storyPointSummary.suggestedEstimate}
+              manualFinalEstimate={manualFinalEstimate}
+              resolvedFinalEstimate={resolvedFinalEstimate}
               complexityAverageLabel={complexityAverageLabel}
               timeAverageLabel={timeAverageLabel}
               moodLabel={moodLabel}
+              interpretationEmoji={interpretation.emoji}
+              interpretationLabel={interpretation.label}
+              interpretationDescription={interpretation.description}
+              canManageRound={canManageRound}
+              onManualFinalEstimateChange={onManualFinalEstimateChange}
             />
 
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
@@ -286,7 +332,7 @@ export function PlanningMode({
 
               {!canManageRound ? (
                 <p className="text-xs text-muted-foreground">
-                  Only the room owner can reveal and manage rounds.
+                  Only the facilitator can reveal and manage rounds.
                 </p>
               ) : null}
 
@@ -313,18 +359,38 @@ export function PlanningMode({
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Story Points</p>
             <p className="text-xs text-muted-foreground">
-              {isCurrentUserFacilitator
-                ? "As facilitator, your estimate stays on Taco/Pass."
-                : "Pick story points first. Secondary sliders capture complexity and time pressure."}
+              {showFacilitatorPassMode
+                ? "Facilitator pass mode keeps your estimate on taco and excludes you from averages."
+                : "Pick story points first. Secondary metrics capture complexity and time pressure."}
             </p>
           </div>
 
           {isCurrentUserFacilitator ? (
-            <div className="rounded-xl border border-primary/35 bg-primary/12 p-4 text-sm text-foreground">
-              Facilitator mode active. Your vote is fixed to{" "}
-              <span className="font-semibold">taco/pass</span> and excluded from numeric averages.
+            <div className="rounded-xl border border-border/75 bg-surface-1/70 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                    Facilitator Mode
+                  </p>
+                  <p className="text-sm text-foreground">
+                    {facilitatorParticipates
+                      ? "You are participating in this estimation round."
+                      : "Default pass is active (taco)."}
+                  </p>
+                </div>
+                <Button
+                  variant={facilitatorParticipates ? "ghost" : "secondary"}
+                  size="sm"
+                  disabled={disabled}
+                  onClick={() => onFacilitatorParticipationChange(!facilitatorParticipates)}
+                >
+                  {facilitatorParticipates ? "Return to pass mode" : "Participate in voting"}
+                </Button>
+              </div>
             </div>
-          ) : (
+          ) : null}
+
+          {showVoteInputs ? (
             <>
               <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 lg:grid-cols-[repeat(13,minmax(0,1fr))]">
                 {PLANNING_DECK.map((value) => {
@@ -359,21 +425,33 @@ export function PlanningMode({
                 })}
               </div>
 
-              <div className="grid gap-3 lg:grid-cols-2">
-                <PlanningMetricSelector
-                  label="Complexity (1-5)"
-                  value={complexityVote}
-                  disabled={disabled || isRevealed}
-                  onChange={handleComplexityChange}
-                />
-                <PlanningMetricSelector
-                  label="Time Consuming (1-5)"
-                  value={timeVote}
-                  disabled={disabled || isRevealed}
-                  onChange={handleTimeChange}
-                />
-              </div>
+              {hideSecondaryMetrics ? (
+                <div className="rounded-lg border border-border/75 bg-surface-1/75 p-3 text-xs text-muted-foreground">
+                  Secondary metrics are hidden while pass/taco is selected.
+                </div>
+              ) : (
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <PlanningMetricSelector
+                    label="Complexity (1-5)"
+                    value={complexityVote}
+                    disabled={disabled || isRevealed}
+                    onChange={handleComplexityChange}
+                  />
+                  <PlanningMetricSelector
+                    label="Time Consuming (1-5)"
+                    value={timeVote}
+                    disabled={disabled || isRevealed}
+                    onChange={handleTimeChange}
+                  />
+                </div>
+              )}
             </>
+          ) : (
+            <div className="rounded-xl border border-primary/35 bg-primary/12 p-4 text-sm text-foreground">
+              Facilitator pass mode active. Your vote defaults to{" "}
+              <span className="font-semibold">taco/pass</span> and you are excluded from averages
+              until you choose to participate.
+            </div>
           )}
         </Card>
       </motion.div>

@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   calculatePlanningAverages,
+  calculateStoryPointSummary,
   calculateVoteAverage,
   derivePlanningMood,
   formatVoteAverage,
+  getStoryPointInterpretation,
+  resolveFinalEstimate,
 } from "@/lib/utils/votes";
 
 describe("calculateVoteAverage", () => {
@@ -54,5 +57,25 @@ describe("calculateVoteAverage", () => {
     });
 
     expect(mood).toBe("Needs discussion");
+  });
+
+  it("computes lower/average/upper and suggested story point summary", () => {
+    const summary = calculateStoryPointSummary(["2", "3", "5", "?", "taco"]);
+
+    expect(summary.lowerBound).toBe(2);
+    expect(summary.upperBound).toBe(5);
+    expect(summary.average).toBeCloseTo(3.3, 1);
+    expect(summary.suggestedEstimate).toBe("3");
+  });
+
+  it("resolves final estimate from suggested value or manual override", () => {
+    expect(resolveFinalEstimate("3", null)).toBe("3");
+    expect(resolveFinalEstimate("3", "5")).toBe("5");
+  });
+
+  it("returns story point interpretation details", () => {
+    expect(getStoryPointInterpretation("5").label).toBe("Time-consuming");
+    expect(getStoryPointInterpretation("?").label).toBe("Needs discussion");
+    expect(getStoryPointInterpretation(null).label).toBe("Awaiting reveal");
   });
 });

@@ -28,11 +28,11 @@ function RevealedEstimate({
 }) {
   const { reducedMotion } = useMotionPreferences();
 
-  if (isFacilitator || vote.storyPoints === "taco") {
+  if (vote.storyPoints === "taco") {
     return (
       <div className="mt-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1.5 text-center">
         <p className="text-[10px] uppercase tracking-[0.12em] text-primary/90">
-          {isFacilitator ? "Facilitator" : "Pass"}
+          {isFacilitator ? "Facilitator Pass" : "Pass"}
         </p>
         <p className="text-xs font-semibold text-foreground">Taco</p>
       </div>
@@ -86,7 +86,12 @@ function VoteStatus({
   const { reducedMotion } = useMotionPreferences();
   const voteFlip = getVoteFlipVariants(reducedMotion);
 
-  const waitingLabel = isFacilitator ? "Facilitating" : hasVoted ? "Estimate locked" : "Waiting";
+  const waitingLabel =
+    isFacilitator && vote?.storyPoints === "taco"
+      ? "Facilitator pass"
+      : hasVoted
+        ? "Estimate locked"
+        : "Waiting";
   const hiddenLabel = revealVotes ? "No vote" : waitingLabel;
 
   return (

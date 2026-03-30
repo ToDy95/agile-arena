@@ -31,6 +31,7 @@ import { normalizePlanningTaskInput } from "@/lib/schemas/planning";
 import {
   PLANNING_VOTE_VALUES,
   type PlanningEstimate,
+  type PlanningFinalEstimateValue,
   type PlanningMetricValue,
   type RetroNote,
   type RoomMode,
@@ -59,6 +60,14 @@ function isPlanningMetricValue(value: unknown): value is PlanningMetricValue {
 function isPlanningVoteValue(value: unknown): value is PlanningEstimate["storyPoints"] {
   return (
     typeof value === "string" &&
+    PLANNING_VOTE_VALUES.includes(value as (typeof PLANNING_VOTE_VALUES)[number])
+  );
+}
+
+function isPlanningFinalEstimateValue(value: unknown): value is PlanningFinalEstimateValue {
+  return (
+    typeof value === "string" &&
+    value !== "taco" &&
     PLANNING_VOTE_VALUES.includes(value as (typeof PLANNING_VOTE_VALUES)[number])
   );
 }
@@ -156,6 +165,9 @@ export function RoomExperience({
   const roomOwnerId = useStorage((root) => root.roomOwnerId) ?? null;
   const sessionNotes = useStorage((root) => root.retro.sessionNotes) ?? "";
   const planning = useStorage((root) => root.planning);
+  const facilitatorParticipates =
+    useStorage((root) => root.planning.facilitatorParticipates) ?? false;
+  const manualFinalEstimateRaw = useStorage((root) => root.planning.manualFinalEstimate);
   const retroNotesMap = useStorage((root) => root.retro.notes);
   const others = useOthers();
   const self = useSelf();
@@ -180,6 +192,10 @@ export function RoomExperience({
     return normalizedVotes as ReadonlyMap<string, PlanningEstimate>;
   }, [planning?.votes]);
 
+  const manualFinalEstimate = isPlanningFinalEstimateValue(manualFinalEstimateRaw)
+    ? manualFinalEstimateRaw
+    : null;
+
   const myVote = votes.get(currentUserId) ?? null;
   const storageReady = planning !== null && retroNotesMap !== null;
   const isOwner = roomOwnerId === currentUserId;
@@ -192,6 +208,14 @@ export function RoomExperience({
   const ensureRoomMetadata = useMutation(({ storage }, userId: string) => {
     if (!storage.get("roomOwnerId")) {
       storage.set("roomOwnerId", userId);
+    }
+
+    const planningRoot = storage.get("planning");
+    if (planningRoot.get("facilitatorParticipates") === undefined) {
+      planningRoot.set("facilitatorParticipates", false);
+    }
+    if (planningRoot.get("manualFinalEstimate") === undefined) {
+      planningRoot.set("manualFinalEstimate", null);
     }
 
     const retroRoot = storage.get("retro");
@@ -231,21 +255,28 @@ export function RoomExperience({
     const planningRoot = storage.get("planning");
     planningRoot.set("taskInput", "");
     planningRoot.set("issueKey", null);
+    planningRoot.set("manualFinalEstimate", null);
   }, []);
 
   const castVote = useMutation(
     ({ storage, setMyPresence }, userId: string, vote: PlanningEstimate) => {
       const planningRoot = storage.get("planning");
+      const voteMap = planningRoot.get("votes");
       const roomOwnerIdInStorage = storage.get("roomOwnerId");
+      const facilitatorParticipatesInStorage = planningRoot.get("facilitatorParticipates") === true;
       const facilitatorVote: PlanningEstimate = {
         storyPoints: "taco",
         complexity: null,
         timeConsuming: null,
       };
-      const normalizedVote = roomOwnerIdInStorage === userId ? facilitatorVote : vote;
+      const normalizedVote =
+        roomOwnerIdInStorage === userId && !facilitatorParticipatesInStorage
+          ? facilitatorVote
+          : vote;
 
-      planningRoot.get("votes").set(userId, normalizedVote);
+      voteMap.set(userId, normalizedVote);
       planningRoot.set("isRevealed", false);
+      planningRoot.set("manualFinalEstimate", null);
       setMyPresence({ hasVoted: true });
     },
     [],
@@ -259,6 +290,12 @@ export function RoomExperience({
     }
 
     const planningRoot = storage.get("planning");
+    const facilitatorParticipatesInStorage = planningRoot.get("facilitatorParticipates") === true;
+
+    if (facilitatorParticipatesInStorage) {
+      return;
+    }
+
     const voteMap = planningRoot.get("votes");
     const existingVote = normalizePlanningEstimate(voteMap.get(userId));
 
@@ -276,8 +313,48 @@ export function RoomExperience({
       complexity: null,
       timeConsuming: null,
     });
+    planningRoot.set("manualFinalEstimate", null);
     setMyPresence({ hasVoted: true });
   }, []);
+
+  const setFacilitatorParticipation = useMutation(
+    ({ storage, setMyPresence }, payload: { userId: string; participates: boolean }) => {
+      if (storage.get("roomOwnerId") !== payload.userId) {
+        return;
+      }
+
+      const planningRoot = storage.get("planning");
+      const voteMap = planningRoot.get("votes");
+      planningRoot.set("facilitatorParticipates", payload.participates);
+      planningRoot.set("isRevealed", false);
+      planningRoot.set("manualFinalEstimate", null);
+
+      if (payload.participates) {
+        voteMap.delete(payload.userId);
+        setMyPresence({ hasVoted: false });
+        return;
+      }
+
+      voteMap.set(payload.userId, {
+        storyPoints: "taco",
+        complexity: null,
+        timeConsuming: null,
+      });
+      setMyPresence({ hasVoted: true });
+    },
+    [],
+  );
+
+  const setManualFinalEstimate = useMutation(
+    ({ storage }, payload: { userId: string; value: PlanningFinalEstimateValue | null }) => {
+      if (storage.get("roomOwnerId") !== payload.userId) {
+        return;
+      }
+
+      storage.get("planning").set("manualFinalEstimate", payload.value);
+    },
+    [],
+  );
 
   const revealVotes = useMutation(({ storage }, userId: string) => {
     if (storage.get("roomOwnerId") !== userId) {
@@ -294,13 +371,26 @@ export function RoomExperience({
 
     const planningRoot = storage.get("planning");
     const voteMap = planningRoot.get("votes");
+    const facilitatorParticipatesInStorage = planningRoot.get("facilitatorParticipates") === true;
 
     for (const key of voteMap.keys()) {
       voteMap.delete(key);
     }
 
     planningRoot.set("isRevealed", false);
-    setMyPresence({ hasVoted: false });
+    planningRoot.set("manualFinalEstimate", null);
+
+    if (facilitatorParticipatesInStorage) {
+      setMyPresence({ hasVoted: false });
+      return;
+    }
+
+    voteMap.set(userId, {
+      storyPoints: "taco",
+      complexity: null,
+      timeConsuming: null,
+    });
+    setMyPresence({ hasVoted: true });
   }, []);
 
   const nextTask = useMutation(({ storage, setMyPresence }, userId: string) => {
@@ -310,6 +400,7 @@ export function RoomExperience({
 
     const planningRoot = storage.get("planning");
     const voteMap = planningRoot.get("votes");
+    const facilitatorParticipatesInStorage = planningRoot.get("facilitatorParticipates") === true;
 
     for (const key of voteMap.keys()) {
       voteMap.delete(key);
@@ -318,7 +409,19 @@ export function RoomExperience({
     planningRoot.set("taskInput", "");
     planningRoot.set("issueKey", null);
     planningRoot.set("isRevealed", false);
-    setMyPresence({ hasVoted: false });
+    planningRoot.set("manualFinalEstimate", null);
+
+    if (facilitatorParticipatesInStorage) {
+      setMyPresence({ hasVoted: false });
+      return;
+    }
+
+    voteMap.set(userId, {
+      storyPoints: "taco",
+      complexity: null,
+      timeConsuming: null,
+    });
+    setMyPresence({ hasVoted: true });
   }, []);
 
   const updateSessionNotes = useMutation(
@@ -455,12 +558,12 @@ export function RoomExperience({
   }, [currentUserId, ensureRoomMetadata, storageReady]);
 
   useEffect(() => {
-    if (!storageReady || !isOwner) {
+    if (!storageReady || !isOwner || facilitatorParticipates) {
       return;
     }
 
     ensureFacilitatorPass(currentUserId);
-  }, [currentUserId, ensureFacilitatorPass, isOwner, storageReady]);
+  }, [currentUserId, ensureFacilitatorPass, facilitatorParticipates, isOwner, storageReady]);
 
   const players = useMemo<RoomPlayer[]>(() => {
     const everyone = self ? [self, ...others] : [...others];
@@ -562,6 +665,8 @@ export function RoomExperience({
         taskInput: planning?.taskInput ?? "",
         issueKey: planning?.issueKey ?? null,
         isRevealed: planning?.isRevealed ?? false,
+        facilitatorParticipates,
+        manualFinalEstimate,
         votes,
         players: players.map((player) => ({
           userId: player.userId,
@@ -649,6 +754,8 @@ export function RoomExperience({
               myVote={myVote}
               canManageRound={isOwner}
               isCurrentUserFacilitator={isOwner}
+              facilitatorParticipates={facilitatorParticipates}
+              manualFinalEstimate={manualFinalEstimate}
               disabled={!storageReady}
               onTaskChange={updateTask}
               onVoteSelect={(vote) => castVote(currentUserId, vote)}
@@ -656,6 +763,18 @@ export function RoomExperience({
               onResetRound={() => resetRound(currentUserId)}
               onClearTask={() => clearTask(currentUserId)}
               onNextTask={() => nextTask(currentUserId)}
+              onFacilitatorParticipationChange={(participates) =>
+                setFacilitatorParticipation({
+                  userId: currentUserId,
+                  participates,
+                })
+              }
+              onManualFinalEstimateChange={(value) =>
+                setManualFinalEstimate({
+                  userId: currentUserId,
+                  value,
+                })
+              }
             />
           </motion.div>
         ) : null}

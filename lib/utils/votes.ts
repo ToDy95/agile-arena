@@ -1,4 +1,10 @@
-import type { PlanningEstimate, PlanningMetricValue, PlanningVoteValue } from "@/lib/types/domain";
+import {
+  PLANNING_FINAL_ESTIMATE_VALUES,
+  type PlanningEstimate,
+  type PlanningFinalEstimateValue,
+  type PlanningMetricValue,
+  type PlanningVoteValue,
+} from "@/lib/types/domain";
 
 export function parseNumericVote(value: PlanningVoteValue): number | null {
   if (!/^\d+$/.test(value)) {
@@ -41,6 +47,23 @@ export type PlanningAverages = {
   timeConsuming: number | null;
 };
 
+export type PlanningStoryPointSummary = {
+  lowerBound: number | null;
+  average: number | null;
+  upperBound: number | null;
+  suggestedEstimate: PlanningFinalEstimateValue | null;
+};
+
+export type StoryPointInterpretation = {
+  emoji: string;
+  label: string;
+  description: string;
+};
+
+const NUMERIC_FINAL_ESTIMATE_VALUES = PLANNING_FINAL_ESTIMATE_VALUES.filter((value) =>
+  /^\d+$/.test(value),
+);
+
 export function calculatePlanningAverages(values: PlanningEstimate[]): PlanningAverages {
   return {
     storyPoints: calculateVoteAverage(values.map((value) => value.storyPoints)),
@@ -50,6 +73,127 @@ export function calculatePlanningAverages(values: PlanningEstimate[]): PlanningA
     timeConsuming: calculateNumericAverage(
       values.map((value) => value.timeConsuming).filter(isMetricValue),
     ),
+  };
+}
+
+function findNearestEstimateValue(average: number): PlanningFinalEstimateValue | null {
+  if (NUMERIC_FINAL_ESTIMATE_VALUES.length === 0) {
+    return null;
+  }
+
+  let best = NUMERIC_FINAL_ESTIMATE_VALUES[0];
+  let bestDistance = Math.abs(Number(best) - average);
+
+  NUMERIC_FINAL_ESTIMATE_VALUES.slice(1).forEach((candidate) => {
+    const candidateDistance = Math.abs(Number(candidate) - average);
+
+    if (candidateDistance < bestDistance) {
+      best = candidate;
+      bestDistance = candidateDistance;
+      return;
+    }
+
+    if (candidateDistance === bestDistance && Number(candidate) > Number(best)) {
+      best = candidate;
+    }
+  });
+
+  return best;
+}
+
+export function calculateStoryPointSummary(values: PlanningVoteValue[]): PlanningStoryPointSummary {
+  const numericVotes = values.map(parseNumericVote).filter((vote): vote is number => vote !== null);
+  const average = calculateNumericAverage(numericVotes);
+
+  if (numericVotes.length === 0) {
+    return {
+      lowerBound: null,
+      average,
+      upperBound: null,
+      suggestedEstimate: null,
+    };
+  }
+
+  return {
+    lowerBound: Math.min(...numericVotes),
+    average,
+    upperBound: Math.max(...numericVotes),
+    suggestedEstimate: average === null ? null : findNearestEstimateValue(average),
+  };
+}
+
+export function resolveFinalEstimate(
+  suggestedEstimate: PlanningFinalEstimateValue | null,
+  manualOverride: PlanningFinalEstimateValue | null,
+): PlanningFinalEstimateValue | null {
+  return manualOverride ?? suggestedEstimate;
+}
+
+export function getStoryPointInterpretation(
+  estimate: PlanningFinalEstimateValue | null,
+): StoryPointInterpretation {
+  if (!estimate) {
+    return {
+      emoji: "🕒",
+      label: "Awaiting reveal",
+      description: "Reveal votes to see the shared estimate.",
+    };
+  }
+
+  if (estimate === "?") {
+    return {
+      emoji: "🧭",
+      label: "Needs discussion",
+      description: "Unknown scope or requirements. Align before deciding points.",
+    };
+  }
+
+  const numericEstimate = Number(estimate);
+
+  if (numericEstimate <= 1) {
+    return {
+      emoji: "✅",
+      label: "Easy",
+      description: "Trivial or near-trivial scope.",
+    };
+  }
+
+  if (numericEstimate <= 2) {
+    return {
+      emoji: "🟢",
+      label: "Small",
+      description: "Straightforward with low complexity.",
+    };
+  }
+
+  if (numericEstimate <= 3) {
+    return {
+      emoji: "🔧",
+      label: "Medium",
+      description: "Moderate effort with a few moving parts.",
+    };
+  }
+
+  if (numericEstimate <= 5) {
+    return {
+      emoji: "⏳",
+      label: "Time-consuming",
+      description: "Larger effort that may need more implementation time.",
+    };
+  }
+
+  if (numericEstimate <= 8) {
+    return {
+      emoji: "🧠",
+      label: "Complex",
+      description: "Multiple dependencies or cross-cutting concerns.",
+    };
+  }
+
+  return {
+    emoji: "⚠️",
+    label: "Risky / split candidate",
+    description: "High risk estimate. Consider splitting before implementation.",
   };
 }
 

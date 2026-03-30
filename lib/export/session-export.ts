@@ -1,8 +1,10 @@
-import type { PlanningEstimate, RetroNote } from "@/lib/types/domain";
+import type { PlanningEstimate, PlanningFinalEstimateValue, RetroNote } from "@/lib/types/domain";
 import {
   calculatePlanningAverages,
+  calculateStoryPointSummary,
   derivePlanningMood,
   formatVoteAverage,
+  resolveFinalEstimate,
 } from "@/lib/utils/votes";
 
 type SessionExportPlayer = {
@@ -20,6 +22,8 @@ export type SessionExportSnapshot = {
     taskInput: string;
     issueKey: string | null;
     isRevealed: boolean;
+    facilitatorParticipates: boolean;
+    manualFinalEstimate: PlanningFinalEstimateValue | null;
     votes: ReadonlyMap<string, PlanningEstimate>;
     players: SessionExportPlayer[];
   };
@@ -38,7 +42,13 @@ const EXPORT_COLUMNS = [
   "taskIssueKey",
   "taskInput",
   "planningRevealed",
+  "facilitatorParticipates",
+  "storyPointLower",
   "avgStoryPoints",
+  "storyPointUpper",
+  "suggestedEstimate",
+  "manualFinalEstimate",
+  "finalEstimate",
   "avgComplexity",
   "avgTimeConsuming",
   "taskMood",
@@ -88,6 +98,13 @@ export function buildSessionExportCsv(snapshot: SessionExportSnapshot): string {
   const rows: ExportRow[] = [];
   const planningVotes = Array.from(snapshot.planning.votes.values());
   const planningAverages = calculatePlanningAverages(planningVotes);
+  const storyPointSummary = calculateStoryPointSummary(
+    planningVotes.map((vote) => vote.storyPoints),
+  );
+  const finalEstimate = resolveFinalEstimate(
+    storyPointSummary.suggestedEstimate,
+    snapshot.planning.manualFinalEstimate,
+  );
   const actionItems = snapshot.retro.notes
     .filter((note) => note.column === "actionItems")
     .map((note) => note.text)
@@ -102,7 +119,13 @@ export function buildSessionExportCsv(snapshot: SessionExportSnapshot): string {
     taskIssueKey: snapshot.planning.issueKey,
     taskInput: snapshot.planning.taskInput,
     planningRevealed: snapshot.planning.isRevealed,
+    facilitatorParticipates: snapshot.planning.facilitatorParticipates,
+    storyPointLower: storyPointSummary.lowerBound,
     avgStoryPoints: formatVoteAverage(planningAverages.storyPoints),
+    storyPointUpper: storyPointSummary.upperBound,
+    suggestedEstimate: storyPointSummary.suggestedEstimate,
+    manualFinalEstimate: snapshot.planning.manualFinalEstimate,
+    finalEstimate,
     avgComplexity: formatVoteAverage(planningAverages.complexity),
     avgTimeConsuming: formatVoteAverage(planningAverages.timeConsuming),
     taskMood: derivePlanningMood(planningAverages),
@@ -118,6 +141,13 @@ export function buildSessionExportCsv(snapshot: SessionExportSnapshot): string {
       taskIssueKey: snapshot.planning.issueKey,
       taskInput: snapshot.planning.taskInput,
       planningRevealed: snapshot.planning.isRevealed,
+      facilitatorParticipates: snapshot.planning.facilitatorParticipates,
+      storyPointLower: storyPointSummary.lowerBound,
+      avgStoryPoints: formatVoteAverage(planningAverages.storyPoints),
+      storyPointUpper: storyPointSummary.upperBound,
+      suggestedEstimate: storyPointSummary.suggestedEstimate,
+      manualFinalEstimate: snapshot.planning.manualFinalEstimate,
+      finalEstimate,
       participantId: player.userId,
       participantName: player.nickname,
       participantStoryPoints: player.vote?.storyPoints ?? "",

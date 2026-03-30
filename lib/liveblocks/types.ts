@@ -2,6 +2,7 @@ import type { LiveMap, LiveObject } from "@liveblocks/client";
 
 import type {
   PlanningEstimate,
+  PlanningFinalEstimateValue,
   RetroColumn,
   RetroNoteStatus,
   RoomMode,
@@ -22,6 +23,8 @@ export type PlanningStorage = LiveObject<{
   taskInput: string;
   issueKey: string | null;
   isRevealed: boolean;
+  facilitatorParticipates: boolean;
+  manualFinalEstimate: PlanningFinalEstimateValue | null;
   votes: LiveMap<string, PlanningEstimate>;
 }>;
 

@@ -20,6 +20,12 @@ export const PLANNING_VOTE_VALUES = [
 
 export type PlanningVoteValue = (typeof PLANNING_VOTE_VALUES)[number];
 
+export const PLANNING_FINAL_ESTIMATE_VALUES = PLANNING_VOTE_VALUES.filter(
+  (value) => value !== "taco",
+) as readonly Exclude<PlanningVoteValue, "taco">[];
+
+export type PlanningFinalEstimateValue = (typeof PLANNING_FINAL_ESTIMATE_VALUES)[number];
+
 export const PLANNING_METRIC_VALUES = [1, 2, 3, 4, 5] as const;
 
 export type PlanningMetricValue = (typeof PLANNING_METRIC_VALUES)[number];
@@ -55,6 +61,8 @@ export type PlanningRoomState = {
   task: PlanningTask;
   isRevealed: boolean;
   votes: Record<string, PlanningEstimate>;
+  facilitatorParticipates: boolean;
+  manualFinalEstimate: PlanningFinalEstimateValue | null;
 };
 
 export type RetroNoteVoteMap = Record<string, true>;
