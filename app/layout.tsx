@@ -33,9 +33,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("dark h-full antialiased", spaceGrotesk.variable, ibmPlexMono.variable)}
+      suppressHydrationWarning
+      className={cn("h-full antialiased", spaceGrotesk.variable, ibmPlexMono.variable)}
     >
-      <body className="min-h-full bg-zinc-950 text-zinc-100">
+      <body className="min-h-full bg-background text-foreground">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

@@ -16,15 +16,15 @@ export default function RoomError({ error, reset }: RoomErrorProps) {
   const itemReveal = getItemRevealVariants(reducedMotion);
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-4 py-8 text-zinc-100 sm:px-8">
+    <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-8">
       <motion.div
         variants={itemReveal}
         initial="hidden"
         animate="show"
-        className="mx-auto max-w-md space-y-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-center"
+        className="mx-auto max-w-md space-y-3 rounded-2xl border border-destructive/35 bg-destructive/12 p-4 text-center"
       >
         <h1 className="text-lg font-semibold">Could not load room</h1>
-        <p className="text-sm text-rose-100/90">
+        <p className="text-sm text-foreground/90">
           {error.message || "An unexpected error occurred."}
         </p>
         <div className="flex justify-center">

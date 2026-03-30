@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
-
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,14 +57,15 @@ export function RoomHeader({ roomId, status }: RoomHeaderProps) {
       initial="hidden"
       animate="show"
       variants={revealVariants}
-      className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 sm:flex-row sm:items-center sm:justify-between"
+      className="flex flex-col gap-4 rounded-2xl border border-border/75 bg-card/90 p-4 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="space-y-1">
-        <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">{APP_NAME}</p>
-        <h1 className="text-lg font-semibold text-zinc-100 sm:text-xl">Room {roomId}</h1>
+        <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{APP_NAME}</p>
+        <h1 className="text-lg font-semibold text-foreground sm:text-xl">Room {roomId}</h1>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ThemeToggle className="max-w-full" />
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={status}
@@ -73,7 +74,7 @@ export function RoomHeader({ roomId, status }: RoomHeaderProps) {
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -5 }}
             transition={motionTransitions.fast}
           >
-            <Badge className="border-zinc-700 bg-zinc-900 text-zinc-300">{status}</Badge>
+            <Badge>{status}</Badge>
           </motion.div>
         </AnimatePresence>
 
@@ -81,7 +82,7 @@ export function RoomHeader({ roomId, status }: RoomHeaderProps) {
           <DialogTrigger asChild>
             <Button variant="secondary">Invite</Button>
           </DialogTrigger>
-          <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Share Room Invite</DialogTitle>
               <DialogDescription>

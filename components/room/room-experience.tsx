@@ -277,7 +277,7 @@ export function RoomExperience({
   }, [retroNotesMap]);
 
   return (
-    <motion.div layout className="space-y-4">
+    <motion.div layout className="space-y-4 overflow-x-clip">
       <RoomHeader roomId={roomId} status={mapStatusLabel(status)} />
       <PlayerStrip
         players={players}
@@ -287,7 +287,7 @@ export function RoomExperience({
 
       {!storageReady ? (
         <motion.div variants={itemReveal} initial="hidden" animate="show">
-          <Card className="space-y-2 border-amber-500/30 bg-amber-500/10 text-amber-100">
+          <Card className="space-y-2 border-amber-500/35 bg-amber-500/12 text-amber-200">
             <motion.p
               className="text-sm font-semibold"
               animate={
@@ -327,6 +327,7 @@ export function RoomExperience({
             initial="initial"
             animate="animate"
             exit="exit"
+            className="overflow-hidden"
           >
             <PlanningMode
               players={players}
@@ -353,6 +354,7 @@ export function RoomExperience({
             initial="initial"
             animate="animate"
             exit="exit"
+            className="overflow-hidden"
           >
             <RetroMode
               notes={retroNotes}

@@ -5,25 +5,22 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-150 active:scale-[0.98] active:translate-y-px",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-xl font-semibold transition-[transform,background-color,border-color,color,box-shadow] duration-150 active:translate-y-px active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/55 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-55",
   {
     variants: {
       variant: {
         default:
-          "bg-sky-500 text-sky-950 hover:bg-sky-400 focus-visible:ring-sky-400/70 disabled:bg-sky-500/40",
+          "bg-primary text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90",
         primary:
-          "bg-sky-500 text-sky-950 hover:bg-sky-400 focus-visible:ring-sky-400/70 disabled:bg-sky-500/40",
+          "bg-primary text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90",
         secondary:
-          "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 focus-visible:ring-zinc-500/70 disabled:bg-zinc-800/40",
-        ghost:
-          "bg-transparent text-zinc-200 hover:bg-zinc-800/80 focus-visible:ring-zinc-500/60 disabled:text-zinc-500",
+          "border border-border/80 bg-surface-2/90 text-foreground shadow-sm shadow-black/5 hover:bg-surface-3",
+        ghost: "bg-transparent text-foreground/85 hover:bg-accent hover:text-foreground",
         destructive:
-          "bg-rose-500 text-rose-950 hover:bg-rose-400 focus-visible:ring-rose-400/70 disabled:bg-rose-500/40",
-        danger:
-          "bg-rose-500 text-rose-950 hover:bg-rose-400 focus-visible:ring-rose-400/70 disabled:bg-rose-500/40",
-        outline:
-          "border border-zinc-700 bg-zinc-900/80 text-zinc-100 hover:border-zinc-500 hover:bg-zinc-900 focus-visible:ring-zinc-500/70",
-        link: "text-sky-300 underline-offset-4 hover:underline",
+          "bg-destructive text-white shadow-sm shadow-destructive/25 hover:bg-destructive/90",
+        danger: "bg-destructive text-white shadow-sm shadow-destructive/25 hover:bg-destructive/90",
+        outline: "border border-border bg-surface-1/90 text-foreground hover:bg-surface-2",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 text-sm",
@@ -56,10 +53,7 @@ function Button({
   return (
     <Comp
       data-slot="button"
-      className={cn(
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:cursor-not-allowed",
-        buttonVariants({ variant, size, className }),
-      )}
+      className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   );

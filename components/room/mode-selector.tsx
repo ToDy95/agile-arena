@@ -42,11 +42,11 @@ export function ModeSelector({ mode, onModeChange, disabled = false }: ModeSelec
             layout
             disabled={disabled}
             className={cn(
-              "relative h-full rounded-2xl border px-4 py-4 text-left transition",
+              "relative h-full overflow-hidden rounded-2xl border px-4 py-4 text-left transition-colors",
               disabled && "cursor-not-allowed opacity-60",
               isActive
-                ? "border-sky-500/70 bg-sky-500/10"
-                : "border-zinc-800 bg-zinc-900/70 hover:border-zinc-700",
+                ? "border-primary/70 bg-accent-soft"
+                : "border-border/75 bg-card/85 hover:border-primary/35 hover:bg-surface-2/85",
             )}
             onClick={() => onModeChange(entry.id)}
             {...cardInteraction}
@@ -54,13 +54,13 @@ export function ModeSelector({ mode, onModeChange, disabled = false }: ModeSelec
             {isActive ? (
               <motion.span
                 layoutId="agile-arena-mode-active-pill"
-                className="pointer-events-none absolute inset-0 rounded-2xl border border-sky-400/60"
+                className="pointer-events-none absolute inset-0 rounded-2xl border border-primary/70"
                 transition={motionTransitions.spring}
               />
             ) : null}
 
-            <p className="relative text-sm font-semibold text-zinc-100">{entry.title}</p>
-            <p className="relative mt-1 text-sm text-zinc-400">{entry.description}</p>
+            <p className="relative text-sm font-semibold text-foreground">{entry.title}</p>
+            <p className="relative mt-1 text-sm text-muted-foreground">{entry.description}</p>
           </motion.button>
         );
       })}

@@ -75,12 +75,12 @@ function RetroColumnLane({
   return (
     <Card className={cn("space-y-3", columnMeta.toneClassName)}>
       <div>
-        <p className="text-sm font-semibold text-zinc-100">{columnMeta.title}</p>
-        <p className="text-xs text-zinc-400">{columnMeta.description}</p>
+        <p className="text-sm font-semibold text-foreground">{columnMeta.title}</p>
+        <p className="text-xs text-muted-foreground">{columnMeta.description}</p>
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-zinc-400">{notes.length} notes</p>
+        <p className="text-xs text-muted-foreground">{notes.length} notes</p>
         <motion.div {...cardInteraction}>
           <Button
             size="sm"
@@ -130,7 +130,7 @@ function RetroColumnLane({
           <motion.div
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
             animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-            className="rounded-xl border border-dashed border-zinc-700/80 p-3 text-sm text-zinc-500"
+            className="rounded-xl border border-dashed border-border/75 bg-surface-1/65 p-3 text-sm text-muted-foreground"
           >
             No notes yet.
           </motion.div>
@@ -146,11 +146,11 @@ function RetroColumnLane({
             <motion.div
               key={note.id}
               layout
-              className="rounded-xl border border-zinc-700/70 bg-zinc-950/70 p-3"
+              className="overflow-hidden rounded-xl border border-border/75 bg-surface-1/80 p-3"
               {...cardInteraction}
             >
               <div className="mb-2 flex items-start justify-between gap-2">
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-muted-foreground">
                   <span style={{ color: note.authorColor }}>{note.authorNickname}</span>
                 </p>
                 <div className="flex items-center gap-1">
@@ -214,7 +214,7 @@ function RetroColumnLane({
                     exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
                     transition={motionTransitions.fast}
                     className={cn(
-                      "w-full text-left text-sm text-zinc-200",
+                      "w-full text-left text-sm text-foreground",
                       isAuthor ? "cursor-pointer" : "cursor-default",
                     )}
                     onClick={() => {

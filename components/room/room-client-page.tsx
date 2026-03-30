@@ -40,9 +40,11 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
 
   if (!isReady) {
     return (
-      <main className="min-h-screen bg-zinc-950 px-4 py-8 text-zinc-100 sm:px-8">
+      <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-8">
         <motion.div variants={itemReveal} initial="hidden" animate="show">
-          <Card className="mx-auto max-w-md text-center text-zinc-400">Loading room...</Card>
+          <Card className="mx-auto max-w-md text-center text-muted-foreground">
+            Loading room...
+          </Card>
         </motion.div>
       </main>
     );
@@ -50,11 +52,11 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
 
   if (!nickname) {
     return (
-      <main className="min-h-screen bg-zinc-950 px-4 py-8 text-zinc-100 sm:px-8">
+      <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-8">
         <motion.div variants={itemReveal} initial="hidden" animate="show">
           <Card className="mx-auto max-w-md space-y-4 text-center">
-            <h1 className="text-lg font-semibold text-zinc-100">Nickname required</h1>
-            <p className="text-sm text-zinc-400">
+            <h1 className="text-lg font-semibold text-foreground">Nickname required</h1>
+            <p className="text-sm text-muted-foreground">
               Set your nickname in the lobby before entering a room.
             </p>
             <Link href="/" className="inline-flex">
@@ -67,8 +69,8 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-4 py-6 text-zinc-100 sm:px-8">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(14,165,233,0.14),transparent_35%),radial-gradient(circle_at_90%_20%,rgba(244,63,94,0.12),transparent_35%)]" />
+    <main className="min-h-screen overflow-x-clip bg-background px-4 py-6 text-foreground sm:px-8">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_10%,var(--arena-accent-glow),transparent_35%),radial-gradient(circle_at_90%_20%,var(--arena-accent-soft),transparent_35%)]" />
       <motion.div
         variants={itemReveal}
         initial="hidden"

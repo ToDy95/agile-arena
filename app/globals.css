@@ -5,53 +5,88 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --panel: #10121a;
-  --background: oklch(0.99 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.75rem;
+  color-scheme: light;
+  --radius: 0.78rem;
+
+  --background: oklch(0.985 0.005 264);
+  --foreground: oklch(0.21 0.015 262);
+
+  --panel: oklch(0.972 0.006 264);
+  --surface-1: oklch(1 0 0);
+  --surface-2: oklch(0.975 0.007 264);
+  --surface-3: oklch(0.946 0.01 264);
+
+  --card: var(--surface-1);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-1);
+  --popover-foreground: var(--foreground);
+
+  --arena-accent: oklch(0.66 0.14 232);
+  --arena-accent-foreground: oklch(0.99 0 0);
+  --arena-accent-soft: oklch(0.7 0.13 232 / 0.15);
+  --arena-accent-glow: oklch(0.7 0.13 232 / 0.22);
+
+  --primary: var(--arena-accent);
+  --primary-foreground: var(--arena-accent-foreground);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  --muted-foreground: oklch(0.5 0.01 264);
+  --accent: var(--arena-accent-soft);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.64 0.19 27);
+
+  --border: oklch(0.86 0.01 264 / 0.72);
+  --input: oklch(0.9 0.01 264 / 0.8);
+  --ring: var(--arena-accent);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  color-scheme: dark;
+
+  --background: oklch(0.12 0.012 264);
+  --foreground: oklch(0.965 0.01 264);
+
+  --panel: oklch(0.16 0.013 264);
+  --surface-1: oklch(0.178 0.013 264);
+  --surface-2: oklch(0.205 0.014 264);
+  --surface-3: oklch(0.245 0.016 264);
+
+  --card: var(--surface-1);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.166 0.013 264);
+  --popover-foreground: var(--foreground);
+
+  --arena-accent: oklch(0.73 0.14 236);
+  --arena-accent-foreground: oklch(0.16 0.02 264);
+  --arena-accent-soft: oklch(0.73 0.14 236 / 0.2);
+  --arena-accent-glow: oklch(0.73 0.14 236 / 0.28);
+
+  --primary: var(--arena-accent);
+  --primary-foreground: var(--arena-accent-foreground);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  --muted-foreground: oklch(0.74 0.011 264);
+  --accent: var(--arena-accent-soft);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.69 0.17 26);
+
+  --border: oklch(0.44 0.01 264 / 0.45);
+  --input: oklch(0.27 0.013 264 / 0.9);
+  --ring: var(--arena-accent);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-panel: var(--panel);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-accent-soft: var(--arena-accent-soft);
+  --color-accent-glow: var(--arena-accent-glow);
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -68,10 +103,12 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) * 0.8);
+
+  --radius-sm: calc(var(--radius) * 0.82);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) * 1.2);
-  --radius-xl: calc(var(--radius) * 1.6);
+  --radius-xl: calc(var(--radius) * 1.55);
+
   --font-sans: var(--font-space-grotesk);
   --font-mono: var(--font-ibm-plex-mono);
   --font-heading: var(--font-space-grotesk);
@@ -92,8 +129,10 @@ body {
   color: var(--foreground);
   font-family: var(--font-space-grotesk), "Segoe UI", sans-serif;
   background-image:
-    linear-gradient(120deg, rgba(14, 165, 233, 0.04), transparent 35%),
-    linear-gradient(300deg, rgba(244, 63, 94, 0.05), transparent 40%);
+    radial-gradient(circle at 14% 16%, var(--arena-accent-glow), transparent 33%),
+    radial-gradient(circle at 85% 12%, var(--arena-accent-soft), transparent 34%),
+    radial-gradient(circle at 50% 115%, var(--arena-accent-soft), transparent 42%);
+  background-attachment: fixed;
 }
 
 @layer base {

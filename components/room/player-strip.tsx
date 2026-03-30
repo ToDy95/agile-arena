@@ -10,6 +10,7 @@ import {
   getItemRevealVariants,
   getPresencePulseAnimation,
   getVoteFlipVariants,
+  motionTransitions,
 } from "@/lib/animations/presets";
 
 type PlayerStripProps = {
@@ -30,7 +31,7 @@ function VoteStatus({ revealVotes, voteLabel }: { revealVotes: boolean; voteLabe
           initial="initial"
           animate="animate"
           exit="exit"
-          className="text-xs uppercase tracking-[0.14em] text-zinc-400"
+          className="text-xs uppercase tracking-[0.14em] text-muted-foreground"
         >
           {voteLabel}
         </motion.p>
@@ -106,7 +107,7 @@ export function PlayerStrip({ players, revealVotes }: PlayerStripProps) {
         variants={itemReveal}
         initial="hidden"
         animate="show"
-        className="rounded-2xl border border-dashed border-zinc-700/70 bg-zinc-900/60 p-4 text-sm text-zinc-500"
+        className="rounded-2xl border border-dashed border-border/70 bg-card/72 p-4 text-sm text-muted-foreground"
       >
         <motion.p
           animate={
@@ -133,7 +134,7 @@ export function PlayerStrip({ players, revealVotes }: PlayerStripProps) {
   }
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <AnimatePresence initial={false}>
         {players.map((player) => {
           const voteLabel = revealVotes
@@ -151,19 +152,29 @@ export function PlayerStrip({ players, revealVotes }: PlayerStripProps) {
               initial="hidden"
               animate="show"
               exit="exit"
+              className="overflow-hidden rounded-2xl"
               {...cardInteraction}
             >
               <motion.div
                 animate={isRecentJoin ? getPresencePulseAnimation(reducedMotion) : undefined}
               >
-                <Card className="relative overflow-hidden p-3 transition-shadow duration-200 hover:shadow-[0_0_0_1px_rgba(56,189,248,0.32),0_10px_24px_rgba(2,6,23,0.38)]">
+                <Card className="relative p-3 transition-shadow duration-200 hover:shadow-[0_0_0_1px_var(--arena-accent-soft),0_16px_28px_rgba(2,6,23,0.24)] dark:hover:shadow-[0_0_0_1px_var(--arena-accent-soft),0_16px_28px_rgba(2,6,23,0.5)]">
+                  {isRecentJoin ? (
+                    <motion.span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 rounded-2xl border border-primary/55"
+                      initial={reducedMotion ? { opacity: 0 } : { opacity: 0.55, scale: 0.98 }}
+                      animate={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.03 }}
+                      transition={motionTransitions.base}
+                    />
+                  ) : null}
                   <span
                     aria-hidden
                     className="absolute inset-y-0 left-0 w-1"
                     style={{ backgroundColor: player.color }}
                   />
                   <div className="pl-2">
-                    <p className="truncate text-sm font-semibold text-zinc-100">
+                    <p className="truncate text-sm font-semibold text-foreground">
                       {player.nickname}
                       {player.isSelf ? " (You)" : ""}
                     </p>

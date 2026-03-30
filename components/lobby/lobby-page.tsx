@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -111,30 +111,37 @@ export function LobbyPage() {
       initial="hidden"
       animate="show"
       variants={pageVariants}
-      className="relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100"
+      className="relative min-h-screen overflow-x-clip text-foreground"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(14,165,233,0.2),transparent_35%),radial-gradient(circle_at_85%_15%,rgba(16,185,129,0.16),transparent_35%),radial-gradient(circle_at_50%_80%,rgba(244,63,94,0.12),transparent_40%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,var(--arena-accent-glow),transparent_35%),radial-gradient(circle_at_85%_15%,var(--arena-accent-soft),transparent_34%),radial-gradient(circle_at_50%_80%,var(--arena-accent-soft),transparent_42%)]" />
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="show"
         className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-4 py-10 sm:px-8"
       >
+        <motion.div variants={itemVariants} className="mb-6 flex justify-end sm:mb-8">
+          <ThemeToggle />
+        </motion.div>
         <motion.div variants={itemVariants} className="mb-8 max-w-2xl space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-sky-300/80">
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-primary/90">
             Multiplayer Agile Room
           </p>
-          <h1 className="text-balance text-4xl font-bold leading-tight text-zinc-50 sm:text-6xl">
+          <h1 className="text-balance text-4xl font-bold leading-tight text-foreground sm:text-6xl">
             {APP_NAME}
           </h1>
-          <p className="text-base text-zinc-300 sm:text-lg">{APP_SUBTITLE}</p>
+          <p className="text-base text-muted-foreground sm:text-lg">{APP_SUBTITLE}</p>
         </motion.div>
 
-        <motion.div variants={itemVariants} {...cardInteraction}>
-          <Card className="w-full max-w-xl border-zinc-700/80 bg-zinc-950/75 p-5 sm:p-6">
+        <motion.div
+          variants={itemVariants}
+          {...cardInteraction}
+          className="overflow-hidden rounded-2xl"
+        >
+          <Card className="w-full max-w-xl border-border/75 bg-card/90 p-5 backdrop-blur-sm sm:p-6">
             <motion.div variants={containerVariants} className="space-y-5">
               <motion.div variants={itemVariants} className="space-y-2">
-                <label htmlFor="nickname" className="text-sm font-medium text-zinc-200">
+                <label htmlFor="nickname" className="text-sm font-medium text-foreground/90">
                   Nickname
                 </label>
                 <Input
@@ -149,7 +156,7 @@ export function LobbyPage() {
               </motion.div>
 
               <motion.div variants={itemVariants} className="space-y-2">
-                <label htmlFor="color" className="text-sm font-medium text-zinc-200">
+                <label htmlFor="color" className="text-sm font-medium text-foreground/90">
                   Player color
                 </label>
                 <div className="flex gap-2">
@@ -157,7 +164,7 @@ export function LobbyPage() {
                     id="color"
                     type="color"
                     value={normalizeHexColor(identity.color) ?? "#38BDF8"}
-                    className="h-11 w-14 cursor-pointer rounded-lg border-zinc-700 p-1"
+                    className="h-11 w-14 cursor-pointer rounded-lg border-input p-1"
                     onChange={(event) => updateIdentity({ color: event.target.value })}
                   />
                   <Input
@@ -182,7 +189,7 @@ export function LobbyPage() {
               </motion.div>
 
               <motion.div variants={itemVariants} className="space-y-2">
-                <label htmlFor="room-id" className="text-sm font-medium text-zinc-200">
+                <label htmlFor="room-id" className="text-sm font-medium text-foreground/90">
                   Room ID
                 </label>
                 <Input
@@ -192,7 +199,7 @@ export function LobbyPage() {
                   className="h-11"
                   onChange={(event) => setRoomIdInput(event.target.value)}
                 />
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-muted-foreground">
                   Share the room ID with your team, or create a fresh arena.
                 </p>
               </motion.div>
@@ -210,12 +217,12 @@ export function LobbyPage() {
                             opacity: 1,
                             y: 0,
                             scale: 1,
-                            x: [0, -5, 5, -3, 3, 0],
+                            x: [0, -3, 3, -2, 2, 0],
                           }
                     }
                     exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.98 }}
                     transition={{ duration: reducedMotion ? 0 : 0.28 }}
-                    className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
+                    className="overflow-hidden rounded-lg border border-destructive/35 bg-destructive/12 px-3 py-2 text-sm text-destructive"
                   >
                     {errorMessage}
                   </motion.p>

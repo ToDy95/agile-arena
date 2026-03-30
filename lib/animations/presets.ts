@@ -4,9 +4,9 @@ const easeOutExpo = [0.16, 1, 0.3, 1] as const;
 
 export const motionDurations = {
   instant: 0,
-  fast: 0.14,
-  base: 0.2,
-  slow: 0.28,
+  fast: 0.12,
+  base: 0.18,
+  slow: 0.24,
 } as const;
 
 export const motionTransitions = {
@@ -20,15 +20,15 @@ export const motionTransitions = {
   } satisfies Transition,
   spring: {
     type: "spring",
-    stiffness: 360,
-    damping: 28,
-    mass: 0.82,
+    stiffness: 400,
+    damping: 33,
+    mass: 0.8,
   } satisfies Transition,
   snappySpring: {
     type: "spring",
-    stiffness: 460,
-    damping: 32,
-    mass: 0.72,
+    stiffness: 500,
+    damping: 36,
+    mass: 0.68,
   } satisfies Transition,
 };
 
@@ -42,9 +42,9 @@ export function getItemRevealVariants(reducedMotion: boolean): Variants {
   }
 
   return {
-    hidden: { opacity: 0, y: 14, scale: 0.985 },
+    hidden: { opacity: 0, y: 10, scale: 0.992 },
     show: { opacity: 1, y: 0, scale: 1, transition: motionTransitions.base },
-    exit: { opacity: 0, y: -8, scale: 0.985, transition: motionTransitions.fast },
+    exit: { opacity: 0, y: -4, scale: 0.992, transition: motionTransitions.fast },
   };
 }
 
@@ -60,8 +60,8 @@ export function getContainerStaggerVariants(reducedMotion: boolean): Variants {
     hidden: {},
     show: {
       transition: {
-        staggerChildren: 0.055,
-        delayChildren: 0.05,
+        staggerChildren: 0.045,
+        delayChildren: 0.03,
       },
     },
   };
@@ -77,8 +77,8 @@ export function getCardInteractionProps(reducedMotion: boolean) {
   }
 
   return {
-    whileHover: { y: -3, scale: 1.01 },
-    whileTap: { scale: 0.985 },
+    whileHover: { y: -2, scale: 1.004 },
+    whileTap: { scale: 0.99 },
     transition: motionTransitions.spring,
   };
 }
@@ -93,9 +93,9 @@ export function getModeSwapVariants(reducedMotion: boolean): Variants {
   }
 
   return {
-    initial: { opacity: 0, y: 12, scale: 0.99 },
+    initial: { opacity: 0, y: 8, scale: 0.995 },
     animate: { opacity: 1, y: 0, scale: 1, transition: motionTransitions.base },
-    exit: { opacity: 0, y: -8, scale: 0.99, transition: motionTransitions.fast },
+    exit: { opacity: 0, y: -4, scale: 0.995, transition: motionTransitions.fast },
   };
 }
 
@@ -109,9 +109,9 @@ export function getVoteFlipVariants(reducedMotion: boolean): Variants {
   }
 
   return {
-    initial: { opacity: 0, rotateX: -88, y: 6 },
+    initial: { opacity: 0, rotateX: -72, y: 4 },
     animate: { opacity: 1, rotateX: 0, y: 0, transition: motionTransitions.snappySpring },
-    exit: { opacity: 0, rotateX: 88, y: -6, transition: motionTransitions.fast },
+    exit: { opacity: 0, rotateX: 72, y: -4, transition: motionTransitions.fast },
   };
 }
 
@@ -121,13 +121,10 @@ export function getPresencePulseAnimation(reducedMotion: boolean) {
   }
 
   return {
-    boxShadow: [
-      "0 0 0 0 rgba(56, 189, 248, 0.28)",
-      "0 0 0 10px rgba(56, 189, 248, 0)",
-      "0 0 0 0 rgba(56, 189, 248, 0)",
-    ],
+    scale: [1, 1.012, 1],
+    opacity: [1, 0.95, 1],
     transition: {
-      duration: 1.1,
+      duration: 0.8,
       ease: "easeOut",
     } satisfies Transition,
   };
@@ -139,16 +136,16 @@ export function getReadyPulseAnimation(reducedMotion: boolean) {
   }
 
   return {
-    scale: [1, 1.03, 1],
+    scale: [1, 1.016, 1],
     boxShadow: [
-      "0 0 0 0 rgba(56, 189, 248, 0.0)",
-      "0 0 0 8px rgba(56, 189, 248, 0.15)",
-      "0 0 0 0 rgba(56, 189, 248, 0.0)",
+      "0 0 0 0 rgba(125, 211, 252, 0.0)",
+      "0 0 0 6px rgba(125, 211, 252, 0.14)",
+      "0 0 0 0 rgba(125, 211, 252, 0.0)",
     ],
     transition: {
-      duration: 1.2,
+      duration: 1,
       repeat: Number.POSITIVE_INFINITY,
-      repeatDelay: 0.25,
+      repeatDelay: 0.35,
       ease: "easeInOut",
     } satisfies Transition,
   };
@@ -163,7 +160,7 @@ export function getPageEnterVariants(reducedMotion: boolean): Variants {
   }
 
   return {
-    hidden: { opacity: 0, y: 10 },
+    hidden: { opacity: 0, y: 6 },
     show: { opacity: 1, y: 0, transition: motionTransitions.base },
   };
 }
