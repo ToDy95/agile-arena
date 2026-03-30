@@ -38,12 +38,12 @@ function AvatarFigure({ config }: { config: AvatarConfig }) {
     }
 
     const t = state.clock.elapsedTime;
-    groupRef.current.rotation.y = Math.sin(t * 0.6) * 0.22;
-    groupRef.current.position.y = Math.sin(t * 1.35) * 0.03;
+    groupRef.current.rotation.y = Math.sin(t * 0.62) * 0.18;
+    groupRef.current.position.y = Math.sin(t * 1.35) * 0.02;
   });
 
   return (
-    <group ref={groupRef} position={[0, -0.65, 0]} scale={BODY_SCALE[config.bodyType]}>
+    <group ref={groupRef} position={[0, -0.58, 0]} scale={BODY_SCALE[config.bodyType]}>
       <mesh position={[0, 0, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.72, 0.84, 0.24, 28]} />
         <meshStandardMaterial color="#0F172A" roughness={0.9} metalness={0.04} />
@@ -269,14 +269,23 @@ type AvatarPreviewCanvasProps = {
 export function AvatarPreviewCanvas({ config }: AvatarPreviewCanvasProps) {
   return (
     <Canvas
-      camera={{ position: [0, 0.85, 2.75], fov: 34 }}
+      camera={{ position: [0, 0.96, 2.35], fov: 30 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, alpha: true }}
       shadows
     >
-      <ambientLight intensity={0.72} />
-      <directionalLight position={[2.4, 4, 2.4]} intensity={1.1} castShadow />
-      <directionalLight position={[-1.8, 1.8, -1.3]} intensity={0.35} />
+      <ambientLight intensity={0.45} />
+      <hemisphereLight args={["#b8d5ff", "#070b14", 0.9]} />
+      <spotLight
+        position={[2.8, 4.6, 3.4]}
+        intensity={1.25}
+        angle={0.56}
+        penumbra={0.62}
+        castShadow
+        shadow-mapSize={[512, 512]}
+      />
+      <directionalLight position={[-2.4, 1.9, 2.2]} intensity={0.5} />
+      <pointLight position={[0, 1.5, -2.2]} intensity={0.34} color="#7dd3fc" />
       <AvatarFigure config={config} />
     </Canvas>
   );

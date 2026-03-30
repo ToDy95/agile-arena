@@ -138,6 +138,7 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
             currentUserId={identity.userId}
             currentNickname={nickname}
             currentColor={resolvedColor}
+            currentAvatar={identity.avatar}
             onLeaveRoom={leaveRoom}
             onResetIdentity={handleResetIdentity}
             onLocalReset={handleLocalReset}
