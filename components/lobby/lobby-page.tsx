@@ -16,9 +16,9 @@ import {
   getPageEnterVariants,
 } from "@/lib/animations/presets";
 import { APP_NAME, APP_SUBTITLE } from "@/lib/constants/app";
-import { nicknameSchema } from "@/lib/schemas/identity";
 import { roomIdSchema } from "@/lib/schemas/room";
 import { generateRandomColor, normalizeHexColor } from "@/lib/utils/color";
+import { resolveJoinIdentity } from "@/lib/utils/identity";
 import { generateRoomId } from "@/lib/utils/room";
 
 type ViewTransitionDocument = Document & {
@@ -53,26 +53,24 @@ export function LobbyPage() {
   };
 
   const prepareIdentity = () => {
-    const parsedNickname = nicknameSchema.safeParse(identity.nickname);
+    const parsedIdentity = resolveJoinIdentity({
+      nickname: identity.nickname,
+      color: identity.color,
+    });
 
-    if (!parsedNickname.success) {
-      setErrorMessage(parsedNickname.error.issues[0]?.message ?? "Nickname is required.");
+    if (!parsedIdentity.success) {
+      setErrorMessage(parsedIdentity.error);
       return null;
     }
 
-    const resolvedColor = normalizeHexColor(identity.color) ?? generateRandomColor(identity.color);
-
     updateIdentity({
-      nickname: parsedNickname.data,
-      color: resolvedColor,
+      nickname: parsedIdentity.data.nickname,
+      color: parsedIdentity.data.color,
     });
 
     setErrorMessage(null);
 
-    return {
-      nickname: parsedNickname.data,
-      color: resolvedColor,
-    };
+    return parsedIdentity.data;
   };
 
   const createRoom = () => {

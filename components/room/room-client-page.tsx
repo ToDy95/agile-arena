@@ -1,11 +1,11 @@
 "use client";
 
 import { motion } from "motion/react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { JoinRoomForm } from "@/components/room/join-room-form";
 import { RoomExperience } from "@/components/room/room-experience";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLocalIdentity } from "@/hooks/use-local-identity";
 import { useMotionPreferences } from "@/hooks/use-motion-preferences";
@@ -20,7 +20,8 @@ type RoomClientPageProps = {
 };
 
 export function RoomClientPage({ roomId }: RoomClientPageProps) {
-  const { identity, isReady, updateIdentity } = useLocalIdentity();
+  const router = useRouter();
+  const { identity, isReady, rememberRoomId, updateIdentity } = useLocalIdentity();
   const { reducedMotion } = useMotionPreferences();
   const itemReveal = getItemRevealVariants(reducedMotion);
 
@@ -52,17 +53,30 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
 
   if (!nickname) {
     return (
-      <main className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-8">
-        <motion.div variants={itemReveal} initial="hidden" animate="show">
-          <Card className="mx-auto max-w-md space-y-4 text-center">
-            <h1 className="text-lg font-semibold text-foreground">Nickname required</h1>
-            <p className="text-sm text-muted-foreground">
-              Set your nickname in the lobby before entering a room.
-            </p>
-            <Link href="/" className="inline-flex">
-              <Button>Back to lobby</Button>
-            </Link>
-          </Card>
+      <main className="min-h-screen overflow-x-clip bg-background px-4 py-8 text-foreground sm:px-8">
+        <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_10%,var(--arena-accent-glow),transparent_35%),radial-gradient(circle_at_90%_20%,var(--arena-accent-soft),transparent_35%)]" />
+        <motion.div
+          variants={itemReveal}
+          initial="hidden"
+          animate="show"
+          className="relative mx-auto max-w-7xl"
+        >
+          <JoinRoomForm
+            roomIdFromUrl={roomId}
+            initialNickname={identity.nickname}
+            initialColor={resolvedColor}
+            onJoin={({ nickname: nextNickname, color: nextColor, roomId: nextRoomId }) => {
+              updateIdentity({
+                nickname: nextNickname,
+                color: nextColor,
+              });
+              rememberRoomId(nextRoomId);
+
+              if (nextRoomId !== roomId) {
+                router.push(`/room/${nextRoomId}`);
+              }
+            }}
+          />
         </motion.div>
       </main>
     );
