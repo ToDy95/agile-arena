@@ -1,7 +1,6 @@
 import { LiveMap, LiveObject } from "@liveblocks/client";
-
-import type { RoomMode } from "@/lib/types/domain";
 import type { RoomStorage } from "@/lib/liveblocks/types";
+import type { RoomMode } from "@/lib/types/domain";
 
 export function createInitialStorage(mode: RoomMode = "grooming"): RoomStorage {
   return {

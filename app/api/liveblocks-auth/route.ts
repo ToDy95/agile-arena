@@ -1,34 +1,18 @@
 import { Liveblocks } from "@liveblocks/node";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
+import { liveblocksAuthRequestSchema } from "@/lib/schemas/liveblocks-auth";
+import { parseRoomId } from "@/lib/schemas/room";
 import { normalizeHexColor } from "@/lib/utils/color";
-import { normalizeRoomId } from "@/lib/utils/room";
 
-type AuthRequestBody = {
-  room?: unknown;
-  userId?: unknown;
-  nickname?: unknown;
-  color?: unknown;
-};
-
-function readBodyString(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
+const fallbackNicknameSchema = z.string().trim().min(1).max(32).catch("Player");
 
 export async function POST(request: Request) {
-  // Set this in `.env.local` based on `.env.example`.
   const secret = process.env.LIVEBLOCKS_SECRET_KEY;
 
   if (!secret) {
-    return NextResponse.json(
-      { error: "Missing LIVEBLOCKS_SECRET_KEY." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Missing LIVEBLOCKS_SECRET_KEY." }, { status: 500 });
   }
 
   if (!secret.startsWith("sk_")) {
@@ -41,20 +25,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const parsedBody = (await request
-    .json()
-    .catch(() => null)) as AuthRequestBody | null;
+  const rawBody = (await request.json().catch(() => null)) as unknown;
+  const parsedBody = liveblocksAuthRequestSchema.safeParse(rawBody);
 
-  const rawRoomId = readBodyString(parsedBody?.room);
-  const roomId = rawRoomId ? normalizeRoomId(rawRoomId) : null;
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: "Invalid authentication payload." }, { status: 400 });
+  }
+
+  const roomId = parseRoomId(parsedBody.data.room ?? "");
 
   if (!roomId) {
     return NextResponse.json({ error: "Invalid room id." }, { status: 400 });
   }
 
-  const userId = readBodyString(parsedBody?.userId) ?? crypto.randomUUID();
-  const nickname = (readBodyString(parsedBody?.nickname) ?? "Player").slice(0, 32);
-  const color = normalizeHexColor(readBodyString(parsedBody?.color) ?? "") ?? "#38BDF8";
+  const userId = parsedBody.data.userId?.trim() || crypto.randomUUID();
+  const nickname = fallbackNicknameSchema.parse(parsedBody.data.nickname);
+  const color = normalizeHexColor(parsedBody.data.color ?? "") ?? "#38BDF8";
 
   try {
     const liveblocks = new Liveblocks({ secret });
@@ -86,8 +72,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unexpected authorization error.";
+    const message = error instanceof Error ? error.message : "Unexpected authorization error.";
 
     return NextResponse.json(
       {

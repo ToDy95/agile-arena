@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { APP_NAME, APP_SUBTITLE } from "@/lib/constants/app";
 import { useLocalIdentity } from "@/hooks/use-local-identity";
+import { APP_NAME, APP_SUBTITLE } from "@/lib/constants/app";
+import { nicknameSchema } from "@/lib/schemas/identity";
+import { roomIdSchema } from "@/lib/schemas/room";
 import { generateRandomColor, normalizeHexColor } from "@/lib/utils/color";
-import { generateRoomId, normalizeRoomId } from "@/lib/utils/room";
+import { generateRoomId } from "@/lib/utils/room";
 
 export function LobbyPage() {
   const router = useRouter();
@@ -19,25 +21,24 @@ export function LobbyPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const prepareIdentity = () => {
-    const trimmedNickname = identity.nickname.trim();
+    const parsedNickname = nicknameSchema.safeParse(identity.nickname);
 
-    if (trimmedNickname.length === 0) {
-      setErrorMessage("Please enter a nickname before joining the arena.");
+    if (!parsedNickname.success) {
+      setErrorMessage(parsedNickname.error.issues[0]?.message ?? "Nickname is required.");
       return null;
     }
 
-    const resolvedColor =
-      normalizeHexColor(identity.color) ?? generateRandomColor(identity.color);
+    const resolvedColor = normalizeHexColor(identity.color) ?? generateRandomColor(identity.color);
 
     updateIdentity({
-      nickname: trimmedNickname,
+      nickname: parsedNickname.data,
       color: resolvedColor,
     });
 
     setErrorMessage(null);
 
     return {
-      nickname: trimmedNickname,
+      nickname: parsedNickname.data,
       color: resolvedColor,
     };
   };
@@ -59,15 +60,18 @@ export function LobbyPage() {
 
     const candidateRoomId =
       roomIdInput.trim().length > 0 ? roomIdInput : (identity.lastRoomId ?? "");
-    const normalizedRoomId = normalizeRoomId(candidateRoomId);
+    const parsedRoomId = roomIdSchema.safeParse(candidateRoomId);
 
-    if (!normalizedRoomId) {
-      setErrorMessage("Room ID must contain 3-40 letters, numbers, or dashes.");
+    if (!parsedRoomId.success) {
+      setErrorMessage(
+        parsedRoomId.error.issues[0]?.message ??
+          "Room ID must contain 3-40 letters, numbers, or dashes.",
+      );
       return;
     }
 
-    rememberRoomId(normalizedRoomId);
-    router.push(`/room/${normalizedRoomId}`);
+    rememberRoomId(parsedRoomId.data);
+    router.push(`/room/${parsedRoomId.data}`);
   };
 
   return (
@@ -96,6 +100,7 @@ export function LobbyPage() {
                 maxLength={32}
                 autoComplete="nickname"
                 placeholder="Type your arena name"
+                className="h-11"
                 onChange={(event) => updateIdentity({ nickname: event.target.value })}
               />
             </div>
@@ -115,11 +120,12 @@ export function LobbyPage() {
                 <Input
                   value={identity.color}
                   maxLength={7}
-                  className="font-mono"
+                  className="h-11 font-mono"
                   onChange={(event) => updateIdentity({ color: event.target.value })}
                 />
                 <Button
                   variant="secondary"
+                  size="lg"
                   className="min-w-28"
                   onClick={() =>
                     updateIdentity({
@@ -140,6 +146,7 @@ export function LobbyPage() {
                 id="room-id"
                 value={roomIdInput}
                 placeholder={identity.lastRoomId ?? "arena-abc123ef"}
+                className="h-11"
                 onChange={(event) => setRoomIdInput(event.target.value)}
               />
               <p className="text-xs text-zinc-500">
@@ -157,12 +164,7 @@ export function LobbyPage() {
               <Button size="lg" onClick={createRoom} disabled={!isReady}>
                 Create room
               </Button>
-              <Button
-                size="lg"
-                variant="secondary"
-                onClick={joinRoom}
-                disabled={!isReady}
-              >
+              <Button size="lg" variant="secondary" onClick={joinRoom} disabled={!isReady}>
                 Join room
               </Button>
             </div>

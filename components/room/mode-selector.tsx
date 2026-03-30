@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils/cn";
 import type { RoomMode } from "@/lib/types/domain";
+import { cn } from "@/lib/utils/cn";
 
 type ModeSelectorProps = {
   mode: RoomMode;
@@ -21,11 +21,7 @@ const MODE_META: Array<{ id: RoomMode; title: string; description: string }> = [
   },
 ];
 
-export function ModeSelector({
-  mode,
-  onModeChange,
-  disabled = false,
-}: ModeSelectorProps) {
+export function ModeSelector({ mode, onModeChange, disabled = false }: ModeSelectorProps) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {MODE_META.map((entry) => {

@@ -1,11 +1,6 @@
 import type { LiveMap, LiveObject } from "@liveblocks/client";
 
-import type {
-  PlanningVoteValue,
-  RetroColumn,
-  RoomMode,
-  RoomPresence,
-} from "@/lib/types/domain";
+import type { PlanningVoteValue, RetroColumn, RoomMode, RoomPresence } from "@/lib/types/domain";
 
 export type RoomUserInfo = {
   nickname: string;

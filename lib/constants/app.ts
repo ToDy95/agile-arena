@@ -1,7 +1,6 @@
 export const APP_NAME = "Agile Arena";
 
-export const APP_SUBTITLE =
-  "A gamified multiplayer room for Retro and Grooming ceremonies.";
+export const APP_SUBTITLE = "A gamified multiplayer room for Retro and Grooming ceremonies.";
 
 export const STORAGE_KEYS = {
   identity: "agile-arena.identity.v1",

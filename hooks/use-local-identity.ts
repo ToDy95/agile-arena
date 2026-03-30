@@ -31,7 +31,6 @@ export function useLocalIdentity() {
     }
 
     // Hydrate browser-only identity state from localStorage after mount.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIdentity({
       ...resolvedIdentity,
       lastRoomId: readLastRoomId(),

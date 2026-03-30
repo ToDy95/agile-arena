@@ -20,9 +20,10 @@ import {
   useUpdateMyPresence,
 } from "@/lib/liveblocks/room-context";
 import type { RetroNoteStorage } from "@/lib/liveblocks/types";
+import { normalizePlanningTaskInput } from "@/lib/schemas/planning";
 import type { PlanningVoteValue, RetroNote, RoomMode } from "@/lib/types/domain";
-import { extractJiraIssueKey } from "@/lib/utils/jira";
 import { normalizeHexColor } from "@/lib/utils/color";
+import { extractJiraIssueKey } from "@/lib/utils/jira";
 
 type RoomExperienceProps = {
   roomId: string;
@@ -67,8 +68,10 @@ export function RoomExperience({
 
   const votes = useMemo(
     () =>
-      (planning?.votes ??
-        new Map<string, PlanningVoteValue>()) as ReadonlyMap<string, PlanningVoteValue>,
+      (planning?.votes ?? new Map<string, PlanningVoteValue>()) as ReadonlyMap<
+        string,
+        PlanningVoteValue
+      >,
     [planning?.votes],
   );
 
@@ -82,8 +85,9 @@ export function RoomExperience({
 
   const updateTask = useMutation(({ storage }, input: string) => {
     const planningRoot = storage.get("planning");
-    planningRoot.set("taskInput", input);
-    planningRoot.set("issueKey", extractJiraIssueKey(input));
+    const normalizedInput = normalizePlanningTaskInput(input);
+    planningRoot.set("taskInput", normalizedInput);
+    planningRoot.set("issueKey", extractJiraIssueKey(normalizedInput));
   }, []);
 
   const clearTask = useMutation(({ storage }) => {
@@ -201,10 +205,7 @@ export function RoomExperience({
   );
 
   useEffect(() => {
-    if (
-      myPresence.mode === roomMode &&
-      myPresence.hasVoted === (myVote !== null)
-    ) {
+    if (myPresence.mode === roomMode && myPresence.hasVoted === (myVote !== null)) {
       return;
     }
 
@@ -273,7 +274,10 @@ export function RoomExperience({
   return (
     <div className="space-y-4">
       <RoomHeader roomId={roomId} status={mapStatusLabel(status)} />
-      <PlayerStrip players={players} revealVotes={roomMode === "grooming" && Boolean(planning?.isRevealed)} />
+      <PlayerStrip
+        players={players}
+        revealVotes={roomMode === "grooming" && Boolean(planning?.isRevealed)}
+      />
       <ModeSelector mode={roomMode} disabled={!storageReady} onModeChange={setMode} />
 
       {!storageReady ? (

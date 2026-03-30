@@ -9,9 +9,7 @@ export function parseNumericVote(value: PlanningVoteValue): number | null {
 }
 
 export function calculateVoteAverage(values: PlanningVoteValue[]): number | null {
-  const numericVotes = values
-    .map(parseNumericVote)
-    .filter((vote): vote is number => vote !== null);
+  const numericVotes = values.map(parseNumericVote).filter((vote): vote is number => vote !== null);
 
   if (numericVotes.length === 0) {
     return null;

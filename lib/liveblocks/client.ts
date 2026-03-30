@@ -2,11 +2,7 @@
 
 import { createClient } from "@liveblocks/client";
 
-import {
-  createDefaultIdentity,
-  readIdentity,
-  writeIdentity,
-} from "@/lib/storage/identity-storage";
+import { createDefaultIdentity, readIdentity, writeIdentity } from "@/lib/storage/identity-storage";
 
 async function authEndpoint(room?: string) {
   const storedIdentity = readIdentity();
@@ -33,9 +29,12 @@ async function authEndpoint(room?: string) {
     let details = "Could not authenticate with Liveblocks.";
 
     try {
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as { details?: string; error?: string };
       if (payload.error) {
         details = payload.error;
+      }
+      if (payload.details) {
+        details = `${details} ${payload.details}`;
       }
     } catch {
       // Ignore non-JSON auth errors.

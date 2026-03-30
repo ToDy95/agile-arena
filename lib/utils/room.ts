@@ -1,22 +1,24 @@
 import { ROOM_ID_PREFIX } from "@/lib/constants/app";
-
-const ROOM_ID_PATTERN = /^[a-z0-9-]{3,40}$/;
+import { parseRoomId } from "@/lib/schemas/room";
 
 export function generateRoomId(): string {
-  const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
-  return `${ROOM_ID_PREFIX}-${suffix}`;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+    const candidate = `${ROOM_ID_PREFIX}-${suffix}`;
+    const parsed = parseRoomId(candidate);
+
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  return `${ROOM_ID_PREFIX}-${Date.now().toString(36)}`;
 }
 
 export function normalizeRoomId(value: string): string | null {
-  const normalized = value.trim().toLowerCase().replace(/\s+/g, "-");
-
-  if (!ROOM_ID_PATTERN.test(normalized)) {
-    return null;
-  }
-
-  return normalized;
+  return parseRoomId(value);
 }
 
 export function isValidRoomId(value: string): boolean {
-  return normalizeRoomId(value) !== null;
+  return parseRoomId(value) !== null;
 }

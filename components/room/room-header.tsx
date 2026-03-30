@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { APP_NAME } from "@/lib/constants/app";
 
 type RoomHeaderProps = {
@@ -13,10 +22,18 @@ type RoomHeaderProps = {
 
 export function RoomHeader({ roomId, status }: RoomHeaderProps) {
   const [copied, setCopied] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState("");
+
+  useEffect(() => {
+    if (!isInviteOpen || typeof window === "undefined") {
+      return;
+    }
+
+    setInviteUrl(window.location.href);
+  }, [isInviteOpen]);
 
   const copyInvite = async () => {
-    const inviteUrl = typeof window === "undefined" ? "" : window.location.href;
-
     if (!inviteUrl) {
       return;
     }
@@ -39,9 +56,29 @@ export function RoomHeader({ roomId, status }: RoomHeaderProps) {
 
       <div className="flex items-center gap-2">
         <Badge className="border-zinc-700 bg-zinc-900 text-zinc-300">{status}</Badge>
-        <Button variant="secondary" onClick={copyInvite}>
-          {copied ? "Copied" : "Invite"}
-        </Button>
+
+        <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+          <DialogTrigger asChild>
+            <Button variant="secondary">Invite</Button>
+          </DialogTrigger>
+          <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Share Room Invite</DialogTitle>
+              <DialogDescription>
+                Send this link to teammates so they can join the same arena instantly.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <Input value={inviteUrl} readOnly className="font-mono text-xs" />
+              <div className="flex justify-end">
+                <Button variant="secondary" onClick={copyInvite}>
+                  {copied ? "Copied" : "Copy link"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </header>
   );

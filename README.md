@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agile Arena
 
-## Getting Started
+Realtime multiplayer agile room built with Next.js App Router, TypeScript, Tailwind, and Liveblocks.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router)
+- React 19 + TypeScript
+- Tailwind CSS v4
+- Liveblocks (presence + shared storage)
+- TanStack Query (provider-ready for future API usage)
+- Zod (runtime validation)
+- Biome (format + lint)
+- Vitest (unit tests)
+- Playwright (e2e)
+- shadcn/ui (UI primitives)
+
+## Requirements
+
+- Node.js 20+
+- pnpm 10+
+- Liveblocks secret key
+
+## Setup
+
+1. Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Configure environment variables:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Set your Liveblocks secret in `.env.local`:
 
-## Learn More
+```bash
+LIVEBLOCKS_SECRET_KEY=sk_prod_xxxxxxxxxxxxxxxxxxxxx
+```
 
-To learn more about Next.js, take a look at the following resources:
+4. Start dev server:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open `http://localhost:3000`.
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### App
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `pnpm dev`
+- `pnpm build`
+- `pnpm start`
+
+### Quality
+
+- `pnpm lint` (Biome check)
+- `pnpm format` (Biome write)
+- `pnpm typecheck`
+- `pnpm check` (lint + typecheck + unit tests + build)
+
+### Tests
+
+- `pnpm test` / `pnpm test:unit`
+- `pnpm test:watch`
+- `pnpm test:e2e`
+- `pnpm test:e2e:install`
+- `pnpm test:e2e:ui`
+- `pnpm test:e2e:headed`
+
+### Clean / Reset
+
+- `pnpm clean`
+- `pnpm clean:next`
+- `pnpm clean:modules`
+- `pnpm clean:install`
+- `pnpm reset`
+
+## Git Hooks
+
+Husky + lint-staged are configured. On pre-commit, staged files run through Biome fast checks.

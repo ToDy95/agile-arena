@@ -1,21 +1,18 @@
 import { COLOR_PALETTE } from "@/lib/constants/colors";
+import { hexColorSchema } from "@/lib/schemas/identity";
 
 export function isHexColor(value: string): boolean {
-  return /^#[0-9a-f]{6}$/i.test(value.trim());
+  return hexColorSchema.safeParse(value).success;
 }
 
 export function normalizeHexColor(value: string): string | null {
-  const trimmed = value.trim();
-
-  if (isHexColor(trimmed)) {
-    return trimmed.toUpperCase();
-  }
-
-  return null;
+  const parsed = hexColorSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }
 
 export function generateRandomColor(previous?: string): string {
-  const alternatives = COLOR_PALETTE.filter((color) => color !== previous);
+  const previousColor = normalizeHexColor(previous ?? "");
+  const alternatives = COLOR_PALETTE.filter((color) => color !== previousColor);
 
   if (alternatives.length === 0) {
     return COLOR_PALETTE[0];

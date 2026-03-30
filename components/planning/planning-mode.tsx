@@ -6,8 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PLANNING_DECK } from "@/lib/constants/planning";
 import type { PlanningVoteValue } from "@/lib/types/domain";
-import { calculateVoteAverage, formatVoteAverage } from "@/lib/utils/votes";
 import { cn } from "@/lib/utils/cn";
+import { calculateVoteAverage, formatVoteAverage } from "@/lib/utils/votes";
 
 type PlanningModeProps = {
   players: RoomPlayer[];

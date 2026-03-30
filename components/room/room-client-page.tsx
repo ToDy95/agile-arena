@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { useLocalIdentity } from "@/hooks/use-local-identity";
 import { createInitialStorage } from "@/lib/liveblocks/initial-storage";
 import { RoomProvider } from "@/lib/liveblocks/room-context";
+import { nicknameSchema } from "@/lib/schemas/identity";
 import { generateRandomColor, normalizeHexColor } from "@/lib/utils/color";
 
 type RoomClientPageProps = {
@@ -18,7 +19,8 @@ type RoomClientPageProps = {
 export function RoomClientPage({ roomId }: RoomClientPageProps) {
   const { identity, isReady, updateIdentity } = useLocalIdentity();
 
-  const nickname = identity.nickname.trim();
+  const parsedNickname = nicknameSchema.safeParse(identity.nickname);
+  const nickname = parsedNickname.success ? parsedNickname.data : "";
   const resolvedColor = normalizeHexColor(identity.color) ?? generateRandomColor();
 
   useEffect(() => {

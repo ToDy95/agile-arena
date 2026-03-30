@@ -1,4 +1,6 @@
 import { STORAGE_KEYS } from "@/lib/constants/app";
+import { storedIdentitySchema } from "@/lib/schemas/identity";
+import { parseRoomId } from "@/lib/schemas/room";
 import type { UserIdentity } from "@/lib/types/domain";
 import { generateRandomColor } from "@/lib/utils/color";
 
@@ -28,21 +30,13 @@ export function readIdentity(): StoredIdentity | null {
   }
 
   try {
-    const parsed = JSON.parse(rawValue) as Partial<StoredIdentity>;
+    const parsed = storedIdentitySchema.safeParse(JSON.parse(rawValue));
 
-    if (
-      typeof parsed.userId !== "string" ||
-      typeof parsed.nickname !== "string" ||
-      typeof parsed.color !== "string"
-    ) {
+    if (!parsed.success) {
       return null;
     }
 
-    return {
-      userId: parsed.userId,
-      nickname: parsed.nickname,
-      color: parsed.color,
-    };
+    return parsed.data;
   } catch {
     return null;
   }
@@ -53,7 +47,13 @@ export function writeIdentity(identity: StoredIdentity): void {
     return;
   }
 
-  window.localStorage.setItem(STORAGE_KEYS.identity, JSON.stringify(identity));
+  const parsed = storedIdentitySchema.safeParse(identity);
+
+  if (!parsed.success) {
+    return;
+  }
+
+  window.localStorage.setItem(STORAGE_KEYS.identity, JSON.stringify(parsed.data));
 }
 
 export function readLastRoomId(): string | null {
@@ -62,7 +62,12 @@ export function readLastRoomId(): string | null {
   }
 
   const roomId = window.localStorage.getItem(STORAGE_KEYS.lastRoomId);
-  return roomId && roomId.trim().length > 0 ? roomId : null;
+
+  if (!roomId) {
+    return null;
+  }
+
+  return parseRoomId(roomId);
 }
 
 export function writeLastRoomId(roomId: string): void {
@@ -70,5 +75,11 @@ export function writeLastRoomId(roomId: string): void {
     return;
   }
 
-  window.localStorage.setItem(STORAGE_KEYS.lastRoomId, roomId);
+  const parsedRoomId = parseRoomId(roomId);
+
+  if (!parsedRoomId) {
+    return;
+  }
+
+  window.localStorage.setItem(STORAGE_KEYS.lastRoomId, parsedRoomId);
 }

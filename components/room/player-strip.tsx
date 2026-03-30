@@ -1,5 +1,5 @@
-import { Card } from "@/components/ui/card";
 import type { RoomPlayer } from "@/components/room/types";
+import { Card } from "@/components/ui/card";
 
 type PlayerStripProps = {
   players: RoomPlayer[];
@@ -19,7 +19,7 @@ export function PlayerStrip({ players, revealVotes }: PlayerStripProps) {
     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
       {players.map((player) => {
         const voteLabel = revealVotes
-          ? player.vote ?? "-"
+          ? (player.vote ?? "-")
           : player.hasVoted
             ? "Voted"
             : "Waiting";
@@ -36,9 +36,7 @@ export function PlayerStrip({ players, revealVotes }: PlayerStripProps) {
                 {player.nickname}
                 {player.isSelf ? " (You)" : ""}
               </p>
-              <p className="mt-2 text-xs uppercase tracking-[0.14em] text-zinc-400">
-                {voteLabel}
-              </p>
+              <p className="mt-2 text-xs uppercase tracking-[0.14em] text-zinc-400">{voteLabel}</p>
             </div>
           </Card>
         );

@@ -134,11 +134,7 @@ export function RetroMode({
                           +1 ({voteCount})
                         </Button>
                         {isAuthor ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => onDeleteNote(note.id)}
-                          >
+                          <Button size="sm" variant="ghost" onClick={() => onDeleteNote(note.id)}>
                             Delete
                           </Button>
                         ) : null}
@@ -168,11 +164,7 @@ export function RetroMode({
                           >
                             Save
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setEditingNoteId(null)}
-                          >
+                          <Button size="sm" variant="ghost" onClick={() => setEditingNoteId(null)}>
                             Cancel
                           </Button>
                         </div>
