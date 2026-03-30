@@ -26,9 +26,9 @@ export type PlanningMetricValue = (typeof PLANNING_METRIC_VALUES)[number];
 
 export type PlanningEstimate = {
   storyPoints: PlanningVoteValue;
-  complexity: PlanningMetricValue;
-  timeConsuming: PlanningMetricValue;
-  researchUnknowns?: PlanningMetricValue;
+  complexity: PlanningMetricValue | null;
+  timeConsuming: PlanningMetricValue | null;
+  researchUnknowns?: PlanningMetricValue | null;
 };
 
 export const RETRO_COLUMNS = ["wentWell", "toImprove", "actionItems"] as const;

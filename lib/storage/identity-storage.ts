@@ -10,6 +10,11 @@ function canUseStorage(): boolean {
   return typeof window !== "undefined";
 }
 
+function removeStorageKey(key: string): void {
+  window.localStorage.removeItem(key);
+  window.sessionStorage.removeItem(key);
+}
+
 export function createDefaultIdentity(): StoredIdentity {
   return {
     userId: crypto.randomUUID(),
@@ -82,4 +87,35 @@ export function writeLastRoomId(roomId: string): void {
   }
 
   window.localStorage.setItem(STORAGE_KEYS.lastRoomId, parsedRoomId);
+}
+
+export function clearIdentityStorage(): void {
+  if (!canUseStorage()) {
+    return;
+  }
+
+  removeStorageKey(STORAGE_KEYS.identity);
+  removeStorageKey(STORAGE_KEYS.lastRoomId);
+}
+
+export function clearAppStorage(): void {
+  if (!canUseStorage()) {
+    return;
+  }
+
+  const appKeys = Object.values(STORAGE_KEYS);
+
+  appKeys.forEach(removeStorageKey);
+
+  for (const key of Object.keys(window.localStorage)) {
+    if (key.startsWith("agile-arena.") || key.startsWith("agile-arena:")) {
+      removeStorageKey(key);
+    }
+  }
+
+  for (const key of Object.keys(window.sessionStorage)) {
+    if (key.startsWith("agile-arena.") || key.startsWith("agile-arena:")) {
+      removeStorageKey(key);
+    }
+  }
 }

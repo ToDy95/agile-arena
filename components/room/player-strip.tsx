@@ -19,13 +19,30 @@ type PlayerStripProps = {
   revealVotes: boolean;
 };
 
-function RevealedEstimate({ vote }: { vote: PlanningEstimate }) {
+function RevealedEstimate({
+  vote,
+  isFacilitator,
+}: {
+  vote: PlanningEstimate;
+  isFacilitator: boolean;
+}) {
   const { reducedMotion } = useMotionPreferences();
+
+  if (isFacilitator || vote.storyPoints === "taco") {
+    return (
+      <div className="mt-2 rounded-md border border-primary/30 bg-primary/10 px-2 py-1.5 text-center">
+        <p className="text-[10px] uppercase tracking-[0.12em] text-primary/90">
+          {isFacilitator ? "Facilitator" : "Pass"}
+        </p>
+        <p className="text-xs font-semibold text-foreground">Taco</p>
+      </div>
+    );
+  }
 
   const breakdown = [
     { label: "SP", value: vote.storyPoints },
-    { label: "Complexity", value: vote.complexity },
-    { label: "Time", value: vote.timeConsuming },
+    { label: "Complexity", value: vote.complexity ?? "-" },
+    { label: "Time", value: vote.timeConsuming ?? "-" },
   ] as const;
 
   return (
@@ -59,15 +76,17 @@ function VoteStatus({
   revealVotes,
   vote,
   hasVoted,
+  isFacilitator,
 }: {
   revealVotes: boolean;
   vote: PlanningEstimate | null;
   hasVoted: boolean;
+  isFacilitator: boolean;
 }) {
   const { reducedMotion } = useMotionPreferences();
   const voteFlip = getVoteFlipVariants(reducedMotion);
 
-  const waitingLabel = hasVoted ? "Estimate locked" : "Waiting";
+  const waitingLabel = isFacilitator ? "Facilitating" : hasVoted ? "Estimate locked" : "Waiting";
   const hiddenLabel = revealVotes ? "No vote" : waitingLabel;
 
   return (
@@ -81,7 +100,7 @@ function VoteStatus({
             animate="animate"
             exit="exit"
           >
-            <RevealedEstimate vote={vote} />
+            <RevealedEstimate vote={vote} isFacilitator={isFacilitator} />
           </motion.div>
         ) : (
           <motion.p
@@ -244,6 +263,7 @@ export function PlayerStrip({ players, revealVotes }: PlayerStripProps) {
                       revealVotes={revealVotes}
                       vote={player.vote}
                       hasVoted={player.hasVoted}
+                      isFacilitator={player.isOwner}
                     />
                   </div>
                 </Card>

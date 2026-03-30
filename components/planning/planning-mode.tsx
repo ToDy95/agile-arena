@@ -34,6 +34,7 @@ type PlanningModeProps = {
   isRevealed: boolean;
   myVote: PlanningEstimate | null;
   canManageRound: boolean;
+  isCurrentUserFacilitator: boolean;
   disabled?: boolean;
   onTaskChange: (value: string) => void;
   onVoteSelect: (value: PlanningEstimate) => void;
@@ -54,6 +55,7 @@ export function PlanningMode({
   isRevealed,
   myVote,
   canManageRound,
+  isCurrentUserFacilitator,
   disabled = false,
   onTaskChange,
   onVoteSelect,
@@ -78,19 +80,35 @@ export function PlanningMode({
       return;
     }
 
-    setComplexityVote(myVote.complexity);
-    setTimeVote(myVote.timeConsuming);
+    if (myVote.complexity !== null) {
+      setComplexityVote(myVote.complexity);
+    }
+
+    if (myVote.timeConsuming !== null) {
+      setTimeVote(myVote.timeConsuming);
+    }
   }, [myVote]);
 
+  const estimatingPlayers = useMemo(() => players.filter((player) => !player.isOwner), [players]);
+
+  const estimatorIds = useMemo(
+    () => new Set(estimatingPlayers.map((player) => player.userId)),
+    [estimatingPlayers],
+  );
+  const estimatorCount = estimatingPlayers.length;
+
   const votedCount = useMemo(
-    () => players.filter((player) => votes.has(player.userId)).length,
-    [players, votes],
+    () => estimatingPlayers.filter((player) => votes.has(player.userId)).length,
+    [estimatingPlayers, votes],
   );
 
   const planningAverages = useMemo(() => {
-    const allVotes = Array.from(votes.values());
-    return calculatePlanningAverages(allVotes);
-  }, [votes]);
+    const relevantVotes = Array.from(votes.entries())
+      .filter(([userId]) => estimatorIds.has(userId))
+      .map(([, estimate]) => estimate);
+
+    return calculatePlanningAverages(relevantVotes);
+  }, [estimatorIds, votes]);
 
   const storyPointsAverageLabel = useMemo(
     () => formatVoteAverage(planningAverages.storyPoints),
@@ -111,20 +129,34 @@ export function PlanningMode({
 
   const statusLabel = isRevealed
     ? "Revealed"
-    : votedCount === players.length && players.length > 0
-      ? "Ready to reveal"
-      : "Waiting for votes";
+    : estimatorCount === 0
+      ? "Need participants"
+      : votedCount === estimatorCount
+        ? "Ready to reveal"
+        : "Waiting for votes";
 
   const revealReady =
     !isRevealed &&
     votedCount > 0 &&
-    (votedCount === players.length || votedCount >= Math.ceil(players.length * 0.8));
+    estimatorCount > 0 &&
+    (votedCount === estimatorCount || votedCount >= Math.ceil(estimatorCount * 0.8));
 
   const handleStoryPointSelect = (storyPoints: PlanningVoteValue) => {
+    if (isCurrentUserFacilitator) {
+      onVoteSelect({
+        storyPoints: "taco",
+        complexity: null,
+        timeConsuming: null,
+      });
+      return;
+    }
+
+    const isPass = storyPoints === "taco";
+
     onVoteSelect({
       storyPoints,
-      complexity: complexityVote,
-      timeConsuming: timeVote,
+      complexity: isPass ? null : complexityVote,
+      timeConsuming: isPass ? null : timeVote,
     });
   };
 
@@ -138,7 +170,7 @@ export function PlanningMode({
     onVoteSelect({
       ...myVote,
       complexity: value,
-      timeConsuming: timeVote,
+      timeConsuming: myVote.timeConsuming ?? timeVote,
     });
   };
 
@@ -151,7 +183,7 @@ export function PlanningMode({
 
     onVoteSelect({
       ...myVote,
-      complexity: complexityVote,
+      complexity: myVote.complexity ?? complexityVote,
       timeConsuming: value,
     });
   };
@@ -200,14 +232,14 @@ export function PlanningMode({
               <span>Votes:</span>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span
-                  key={`${votedCount}-${players.length}`}
+                  key={`${votedCount}-${estimatorCount}`}
                   initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
                   animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
                   exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
                   transition={motionTransitions.fast}
                   className="font-semibold text-foreground"
                 >
-                  {votedCount}/{players.length}
+                  {votedCount}/{estimatorCount}
                 </motion.span>
               </AnimatePresence>
             </div>
@@ -230,7 +262,13 @@ export function PlanningMode({
               <motion.div animate={revealReady ? getReadyPulseAnimation(reducedMotion) : undefined}>
                 <Button
                   variant="secondary"
-                  disabled={disabled || isRevealed || votedCount === 0 || !canManageRound}
+                  disabled={
+                    disabled ||
+                    isRevealed ||
+                    votedCount === 0 ||
+                    estimatorCount === 0 ||
+                    !canManageRound
+                  }
                   onClick={onRevealVotes}
                   className={cn(revealReady && "border border-primary/45")}
                 >
@@ -275,57 +313,68 @@ export function PlanningMode({
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Story Points</p>
             <p className="text-xs text-muted-foreground">
-              Pick the story points first. Secondary sliders capture complexity and time pressure.
+              {isCurrentUserFacilitator
+                ? "As facilitator, your estimate stays on Taco/Pass."
+                : "Pick story points first. Secondary sliders capture complexity and time pressure."}
             </p>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 lg:grid-cols-[repeat(13,minmax(0,1fr))]">
-            {PLANNING_DECK.map((value) => {
-              const isSelected = myVote?.storyPoints === value;
+          {isCurrentUserFacilitator ? (
+            <div className="rounded-xl border border-primary/35 bg-primary/12 p-4 text-sm text-foreground">
+              Facilitator mode active. Your vote is fixed to{" "}
+              <span className="font-semibold">taco/pass</span> and excluded from numeric averages.
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 lg:grid-cols-[repeat(13,minmax(0,1fr))]">
+                {PLANNING_DECK.map((value) => {
+                  const isSelected = myVote?.storyPoints === value;
 
-              return (
-                <motion.button
-                  key={value}
-                  type="button"
+                  return (
+                    <motion.button
+                      key={value}
+                      type="button"
+                      disabled={disabled || isRevealed}
+                      {...cardInteraction}
+                      animate={
+                        reducedMotion
+                          ? undefined
+                          : {
+                              y: isSelected ? -2 : 0,
+                              scale: isSelected ? 1.015 : 1,
+                            }
+                      }
+                      transition={motionTransitions.spring}
+                      className={cn(
+                        "h-14 overflow-hidden rounded-xl border text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
+                        isSelected
+                          ? "border-primary bg-primary/18 text-foreground shadow-[0_0_0_1px_var(--arena-accent-soft),0_12px_24px_rgba(2,6,23,0.24)] dark:shadow-[0_0_0_1px_var(--arena-accent-soft),0_12px_24px_rgba(2,6,23,0.46)]"
+                          : "border-border/75 bg-surface-2/85 text-foreground hover:border-primary/35 hover:bg-surface-3/85",
+                      )}
+                      onClick={() => handleStoryPointSelect(value)}
+                    >
+                      {value}
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-2">
+                <PlanningMetricSelector
+                  label="Complexity (1-5)"
+                  value={complexityVote}
                   disabled={disabled || isRevealed}
-                  {...cardInteraction}
-                  animate={
-                    reducedMotion
-                      ? undefined
-                      : {
-                          y: isSelected ? -2 : 0,
-                          scale: isSelected ? 1.015 : 1,
-                        }
-                  }
-                  transition={motionTransitions.spring}
-                  className={cn(
-                    "h-14 overflow-hidden rounded-xl border text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
-                    isSelected
-                      ? "border-primary bg-primary/18 text-foreground shadow-[0_0_0_1px_var(--arena-accent-soft),0_12px_24px_rgba(2,6,23,0.24)] dark:shadow-[0_0_0_1px_var(--arena-accent-soft),0_12px_24px_rgba(2,6,23,0.46)]"
-                      : "border-border/75 bg-surface-2/85 text-foreground hover:border-primary/35 hover:bg-surface-3/85",
-                  )}
-                  onClick={() => handleStoryPointSelect(value)}
-                >
-                  {value}
-                </motion.button>
-              );
-            })}
-          </div>
-
-          <div className="grid gap-3 lg:grid-cols-2">
-            <PlanningMetricSelector
-              label="Complexity (1-5)"
-              value={complexityVote}
-              disabled={disabled || isRevealed}
-              onChange={handleComplexityChange}
-            />
-            <PlanningMetricSelector
-              label="Time Consuming (1-5)"
-              value={timeVote}
-              disabled={disabled || isRevealed}
-              onChange={handleTimeChange}
-            />
-          </div>
+                  onChange={handleComplexityChange}
+                />
+                <PlanningMetricSelector
+                  label="Time Consuming (1-5)"
+                  value={timeVote}
+                  disabled={disabled || isRevealed}
+                  onChange={handleTimeChange}
+                />
+              </div>
+            </>
+          )}
         </Card>
       </motion.div>
     </motion.div>

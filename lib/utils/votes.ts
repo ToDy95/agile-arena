@@ -1,4 +1,4 @@
-import type { PlanningEstimate, PlanningVoteValue } from "@/lib/types/domain";
+import type { PlanningEstimate, PlanningMetricValue, PlanningVoteValue } from "@/lib/types/domain";
 
 export function parseNumericVote(value: PlanningVoteValue): number | null {
   if (!/^\d+$/.test(value)) {
@@ -23,6 +23,10 @@ function calculateNumericAverage(values: number[]): number | null {
   return total / values.length;
 }
 
+function isMetricValue(value: PlanningMetricValue | null): value is PlanningMetricValue {
+  return typeof value === "number";
+}
+
 export function formatVoteAverage(average: number | null): string {
   if (average === null) {
     return "-";
@@ -40,8 +44,12 @@ export type PlanningAverages = {
 export function calculatePlanningAverages(values: PlanningEstimate[]): PlanningAverages {
   return {
     storyPoints: calculateVoteAverage(values.map((value) => value.storyPoints)),
-    complexity: calculateNumericAverage(values.map((value) => value.complexity)),
-    timeConsuming: calculateNumericAverage(values.map((value) => value.timeConsuming)),
+    complexity: calculateNumericAverage(
+      values.map((value) => value.complexity).filter(isMetricValue),
+    ),
+    timeConsuming: calculateNumericAverage(
+      values.map((value) => value.timeConsuming).filter(isMetricValue),
+    ),
   };
 }
 

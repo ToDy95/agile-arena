@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  clearAppStorage,
+  clearIdentityStorage,
   createDefaultIdentity,
   readIdentity,
   readLastRoomId,
@@ -52,7 +54,29 @@ export function useLocalIdentity() {
 
   const rememberRoomId = useCallback((roomId: string) => {
     writeLastRoomId(roomId);
-    setIdentity((current) => ({ ...current, lastRoomId: roomId }));
+    setIdentity((current) =>
+      current.lastRoomId === roomId ? current : { ...current, lastRoomId: roomId },
+    );
+  }, []);
+
+  const resetIdentity = useCallback(() => {
+    clearIdentityStorage();
+    const freshIdentity = createDefaultIdentity();
+    writeIdentity(freshIdentity);
+    setIdentity({
+      ...freshIdentity,
+      lastRoomId: null,
+    });
+  }, []);
+
+  const resetLocalAppState = useCallback(() => {
+    clearAppStorage();
+    const freshIdentity = createDefaultIdentity();
+    writeIdentity(freshIdentity);
+    setIdentity({
+      ...freshIdentity,
+      lastRoomId: null,
+    });
   }, []);
 
   return {
@@ -60,5 +84,7 @@ export function useLocalIdentity() {
     isReady,
     updateIdentity,
     rememberRoomId,
+    resetIdentity,
+    resetLocalAppState,
   };
 }

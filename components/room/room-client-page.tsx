@@ -21,7 +21,8 @@ type RoomClientPageProps = {
 
 export function RoomClientPage({ roomId }: RoomClientPageProps) {
   const router = useRouter();
-  const { identity, isReady, rememberRoomId, updateIdentity } = useLocalIdentity();
+  const { identity, isReady, rememberRoomId, updateIdentity, resetIdentity, resetLocalAppState } =
+    useLocalIdentity();
   const { reducedMotion } = useMotionPreferences();
   const itemReveal = getItemRevealVariants(reducedMotion);
 
@@ -38,6 +39,28 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
       updateIdentity({ color: resolvedColor });
     }
   }, [identity.color, isReady, resolvedColor, updateIdentity]);
+
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    rememberRoomId(roomId);
+  }, [isReady, rememberRoomId, roomId]);
+
+  const leaveRoom = () => {
+    router.push("/");
+  };
+
+  const handleResetIdentity = () => {
+    resetIdentity();
+    router.push("/");
+  };
+
+  const handleLocalReset = () => {
+    resetLocalAppState();
+    router.push("/");
+  };
 
   if (!isReady) {
     return (
@@ -107,6 +130,9 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
             currentUserId={identity.userId}
             currentNickname={nickname}
             currentColor={resolvedColor}
+            onLeaveRoom={leaveRoom}
+            onResetIdentity={handleResetIdentity}
+            onLocalReset={handleLocalReset}
           />
         </RoomProvider>
       </motion.div>

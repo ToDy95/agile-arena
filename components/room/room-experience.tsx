@@ -43,6 +43,9 @@ type RoomExperienceProps = {
   currentUserId: string;
   currentNickname: string;
   currentColor: string;
+  onLeaveRoom: () => void;
+  onResetIdentity: () => void;
+  onLocalReset: () => void;
 };
 
 function resolvePlayerColor(color: string | undefined): string {
@@ -62,10 +65,12 @@ function isPlanningVoteValue(value: unknown): value is PlanningEstimate["storyPo
 
 function normalizePlanningEstimate(value: unknown): PlanningEstimate | null {
   if (isPlanningVoteValue(value)) {
+    const isPass = value === "taco";
+
     return {
       storyPoints: value,
-      complexity: 3,
-      timeConsuming: 3,
+      complexity: isPass ? null : 3,
+      timeConsuming: isPass ? null : 3,
     };
   }
 
@@ -80,21 +85,42 @@ function normalizePlanningEstimate(value: unknown): PlanningEstimate | null {
     researchUnknowns?: unknown;
   };
 
-  if (
-    !isPlanningVoteValue(candidate.storyPoints) ||
-    !isPlanningMetricValue(candidate.complexity) ||
-    !isPlanningMetricValue(candidate.timeConsuming)
-  ) {
+  if (!isPlanningVoteValue(candidate.storyPoints)) {
     return null;
   }
 
+  const isPass = candidate.storyPoints === "taco";
+  const complexity =
+    candidate.complexity === null
+      ? isPass
+        ? null
+        : 3
+      : isPlanningMetricValue(candidate.complexity)
+        ? candidate.complexity
+        : isPass
+          ? null
+          : 3;
+  const timeConsuming =
+    candidate.timeConsuming === null
+      ? isPass
+        ? null
+        : 3
+      : isPlanningMetricValue(candidate.timeConsuming)
+        ? candidate.timeConsuming
+        : isPass
+          ? null
+          : 3;
+
   return {
     storyPoints: candidate.storyPoints,
-    complexity: candidate.complexity,
-    timeConsuming: candidate.timeConsuming,
-    researchUnknowns: isPlanningMetricValue(candidate.researchUnknowns)
-      ? candidate.researchUnknowns
-      : undefined,
+    complexity,
+    timeConsuming,
+    researchUnknowns:
+      candidate.researchUnknowns === null
+        ? null
+        : isPlanningMetricValue(candidate.researchUnknowns)
+          ? candidate.researchUnknowns
+          : undefined,
   };
 }
 
@@ -118,6 +144,9 @@ export function RoomExperience({
   currentUserId,
   currentNickname,
   currentColor,
+  onLeaveRoom,
+  onResetIdentity,
+  onLocalReset,
 }: RoomExperienceProps) {
   const { reducedMotion } = useMotionPreferences();
   const itemReveal = getItemRevealVariants(reducedMotion);
@@ -207,12 +236,48 @@ export function RoomExperience({
   const castVote = useMutation(
     ({ storage, setMyPresence }, userId: string, vote: PlanningEstimate) => {
       const planningRoot = storage.get("planning");
-      planningRoot.get("votes").set(userId, vote);
+      const roomOwnerIdInStorage = storage.get("roomOwnerId");
+      const facilitatorVote: PlanningEstimate = {
+        storyPoints: "taco",
+        complexity: null,
+        timeConsuming: null,
+      };
+      const normalizedVote = roomOwnerIdInStorage === userId ? facilitatorVote : vote;
+
+      planningRoot.get("votes").set(userId, normalizedVote);
       planningRoot.set("isRevealed", false);
       setMyPresence({ hasVoted: true });
     },
     [],
   );
+
+  const ensureFacilitatorPass = useMutation(({ storage, setMyPresence }, userId: string) => {
+    const roomOwnerIdInStorage = storage.get("roomOwnerId");
+
+    if (roomOwnerIdInStorage !== userId) {
+      return;
+    }
+
+    const planningRoot = storage.get("planning");
+    const voteMap = planningRoot.get("votes");
+    const existingVote = normalizePlanningEstimate(voteMap.get(userId));
+
+    if (
+      existingVote?.storyPoints === "taco" &&
+      existingVote.complexity === null &&
+      existingVote.timeConsuming === null
+    ) {
+      setMyPresence({ hasVoted: true });
+      return;
+    }
+
+    voteMap.set(userId, {
+      storyPoints: "taco",
+      complexity: null,
+      timeConsuming: null,
+    });
+    setMyPresence({ hasVoted: true });
+  }, []);
 
   const revealVotes = useMutation(({ storage }, userId: string) => {
     if (storage.get("roomOwnerId") !== userId) {
@@ -389,6 +454,14 @@ export function RoomExperience({
     ensureRoomMetadata(currentUserId);
   }, [currentUserId, ensureRoomMetadata, storageReady]);
 
+  useEffect(() => {
+    if (!storageReady || !isOwner) {
+      return;
+    }
+
+    ensureFacilitatorPass(currentUserId);
+  }, [currentUserId, ensureFacilitatorPass, isOwner, storageReady]);
+
   const players = useMemo<RoomPlayer[]>(() => {
     const everyone = self ? [self, ...others] : [...others];
 
@@ -513,6 +586,9 @@ export function RoomExperience({
         roomOwnerName={roomOwnerName}
         isCurrentUserOwner={isOwner}
         onExportCsv={exportSessionCsv}
+        onLeaveRoom={onLeaveRoom}
+        onResetIdentity={onResetIdentity}
+        onLocalReset={onLocalReset}
       />
       <PlayerStrip
         players={players}
@@ -572,6 +648,7 @@ export function RoomExperience({
               isRevealed={planning?.isRevealed ?? false}
               myVote={myVote}
               canManageRound={isOwner}
+              isCurrentUserFacilitator={isOwner}
               disabled={!storageReady}
               onTaskChange={updateTask}
               onVoteSelect={(vote) => castVote(currentUserId, vote)}

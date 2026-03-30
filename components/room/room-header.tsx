@@ -24,6 +24,9 @@ type RoomHeaderProps = {
   roomOwnerName: string;
   isCurrentUserOwner: boolean;
   onExportCsv: () => void;
+  onLeaveRoom: () => void;
+  onResetIdentity: () => void;
+  onLocalReset: () => void;
 };
 
 export function RoomHeader({
@@ -32,9 +35,13 @@ export function RoomHeader({
   roomOwnerName,
   isCurrentUserOwner,
   onExportCsv,
+  onLeaveRoom,
+  onResetIdentity,
+  onLocalReset,
 }: RoomHeaderProps) {
   const [copied, setCopied] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isSessionOpen, setIsSessionOpen] = useState(false);
   const [inviteUrl, setInviteUrl] = useState("");
   const { reducedMotion } = useMotionPreferences();
   const revealVariants = getItemRevealVariants(reducedMotion);
@@ -96,6 +103,61 @@ export function RoomHeader({
             Export CSV
           </Button>
         ) : null}
+
+        <Button variant="ghost" onClick={onLeaveRoom}>
+          Leave room
+        </Button>
+
+        <Dialog open={isSessionOpen} onOpenChange={setIsSessionOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost">Session</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Session Controls</DialogTitle>
+              <DialogDescription>
+                Manage your local Agile Arena session data for this browser.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <Button
+                variant="secondary"
+                className="w-full justify-start"
+                onClick={() => {
+                  setIsSessionOpen(false);
+                  onLeaveRoom();
+                }}
+              >
+                Leave room
+              </Button>
+              <Button
+                variant="destructive"
+                className="w-full justify-start"
+                onClick={() => {
+                  setIsSessionOpen(false);
+                  onResetIdentity();
+                }}
+              >
+                Reset identity
+              </Button>
+              <Button
+                variant="destructive"
+                className="w-full justify-start"
+                onClick={() => {
+                  setIsSessionOpen(false);
+                  onLocalReset();
+                }}
+              >
+                Local app reset
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Reset identity clears nickname, color, avatar, and last room. Local app reset clears
+                all Agile Arena local/session storage keys.
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
           <DialogTrigger asChild>
