@@ -28,7 +28,6 @@ export type SessionExportSnapshot = {
     issueKey: string | null;
     taskUrl: string | null;
     isRevealed: boolean;
-    facilitatorParticipates: boolean;
     manualFinalEstimate: PlanningFinalEstimateValue | null;
     finalizedTasks: PlanningFinalizedTask[];
     votes: ReadonlyMap<string, PlanningEstimate>;
@@ -50,7 +49,6 @@ const EXPORT_COLUMNS = [
   "taskInput",
   "taskUrl",
   "planningRevealed",
-  "facilitatorParticipates",
   "storyPointLower",
   "avgStoryPoints",
   "storyPointUpper",
@@ -139,7 +137,6 @@ export function buildSessionExportCsv(snapshot: SessionExportSnapshot): string {
     taskInput: snapshot.planning.taskInput,
     taskUrl: snapshot.planning.taskUrl,
     planningRevealed: snapshot.planning.isRevealed,
-    facilitatorParticipates: snapshot.planning.facilitatorParticipates,
     storyPointLower: storyPointSummary.lowerBound,
     avgStoryPoints: formatVoteAverage(planningAverages.storyPoints),
     storyPointUpper: storyPointSummary.upperBound,
@@ -162,7 +159,6 @@ export function buildSessionExportCsv(snapshot: SessionExportSnapshot): string {
       taskInput: snapshot.planning.taskInput,
       taskUrl: snapshot.planning.taskUrl,
       planningRevealed: snapshot.planning.isRevealed,
-      facilitatorParticipates: snapshot.planning.facilitatorParticipates,
       storyPointLower: storyPointSummary.lowerBound,
       avgStoryPoints: formatVoteAverage(planningAverages.storyPoints),
       storyPointUpper: storyPointSummary.upperBound,

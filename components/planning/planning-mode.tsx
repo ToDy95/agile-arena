@@ -42,7 +42,6 @@ type PlanningModeProps = {
   myVote: PlanningEstimate | null;
   canManageRound: boolean;
   isCurrentUserFacilitator: boolean;
-  facilitatorParticipates: boolean;
   manualFinalEstimate: PlanningFinalEstimateValue | null;
   estimatedTasks: PlanningFinalizedTask[];
   disabled?: boolean;
@@ -60,7 +59,6 @@ type PlanningModeProps = {
     interpretationLabel: string;
     interpretationEmoji: string;
   }) => void;
-  onFacilitatorParticipationChange: (value: boolean) => void;
   onManualFinalEstimateChange: (value: PlanningFinalEstimateValue | null) => void;
 };
 
@@ -76,7 +74,6 @@ export function PlanningMode({
   myVote,
   canManageRound,
   isCurrentUserFacilitator,
-  facilitatorParticipates,
   manualFinalEstimate,
   estimatedTasks,
   disabled = false,
@@ -87,7 +84,6 @@ export function PlanningMode({
   onClearTask,
   onNextTask,
   onFinalizeTask,
-  onFacilitatorParticipationChange,
   onManualFinalEstimateChange,
 }: PlanningModeProps) {
   const { reducedMotion } = useMotionPreferences();
@@ -115,10 +111,7 @@ export function PlanningMode({
     }
   }, [myVote]);
 
-  const estimatingPlayers = useMemo(
-    () => players.filter((player) => !player.isOwner || facilitatorParticipates),
-    [facilitatorParticipates, players],
-  );
+  const estimatingPlayers = useMemo(() => players, [players]);
   const estimatorIds = useMemo(
     () => new Set(estimatingPlayers.map((player) => player.userId)),
     [estimatingPlayers],
@@ -168,9 +161,7 @@ export function PlanningMode({
     estimatorCount > 0 &&
     (votedCount === estimatorCount || votedCount >= Math.ceil(estimatorCount * 0.8));
 
-  const showFacilitatorPassMode = isCurrentUserFacilitator && !facilitatorParticipates;
-  const showVoteInputs = !showFacilitatorPassMode;
-  const hideSecondaryMetrics = !showVoteInputs || myVote?.storyPoints === "taco";
+  const hideSecondaryMetrics = myVote?.storyPoints === "taco";
 
   const handleStoryPointSelect = (storyPoints: PlanningVoteValue) => {
     const isPass = storyPoints === "taco";
@@ -348,100 +339,73 @@ export function PlanningMode({
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Story Points</p>
             <p className="text-xs text-muted-foreground">
-              {showFacilitatorPassMode
-                ? "Facilitator pass mode keeps your estimate on taco and excludes you from averages."
-                : "Pick story points first. Secondary metrics capture complexity and time pressure."}
+              Pick story points first. Secondary metrics appear when a non-taco estimate is
+              selected.
             </p>
           </div>
 
-          {isCurrentUserFacilitator ? (
-            <div className="rounded-xl border border-border/75 bg-surface-1/70 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                    Facilitator Mode
-                  </p>
-                  <p className="text-sm text-foreground">
-                    {facilitatorParticipates
-                      ? "You are participating in this estimation round."
-                      : "Default pass is active (taco)."}
-                  </p>
-                </div>
-                <Button
-                  variant={facilitatorParticipates ? "ghost" : "secondary"}
-                  size="sm"
-                  disabled={disabled}
-                  onClick={() => onFacilitatorParticipationChange(!facilitatorParticipates)}
-                >
-                  {facilitatorParticipates ? "Return to pass mode" : "Participate in voting"}
-                </Button>
-              </div>
+          {isCurrentUserFacilitator && myVote?.storyPoints === "taco" ? (
+            <div className="rounded-xl border border-primary/35 bg-primary/12 p-3 text-sm text-foreground">
+              Facilitator default is <span className="font-semibold">taco/pass</span>. Pick any
+              estimate card to participate in voting.
             </div>
           ) : null}
 
-          {showVoteInputs ? (
-            <>
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 lg:grid-cols-[repeat(13,minmax(0,1fr))]">
-                {PLANNING_DECK.map((value) => {
-                  const isSelected = myVote?.storyPoints === value;
+          <div className="space-y-3">
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 lg:grid-cols-[repeat(13,minmax(0,1fr))]">
+              {PLANNING_DECK.map((value) => {
+                const isSelected = myVote?.storyPoints === value;
 
-                  return (
-                    <motion.button
-                      key={value}
-                      type="button"
-                      disabled={disabled || isRevealed}
-                      {...cardInteraction}
-                      animate={
-                        reducedMotion
-                          ? undefined
-                          : {
-                              y: isSelected ? -2 : 0,
-                              scale: isSelected ? 1.015 : 1,
-                            }
-                      }
-                      transition={motionTransitions.spring}
-                      className={cn(
-                        "h-14 overflow-hidden rounded-xl border text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
-                        isSelected
-                          ? "border-primary bg-primary/18 text-foreground shadow-[0_0_0_1px_var(--arena-accent-soft),0_12px_24px_rgba(2,6,23,0.24)] dark:shadow-[0_0_0_1px_var(--arena-accent-soft),0_12px_24px_rgba(2,6,23,0.46)]"
-                          : "border-border/75 bg-surface-2/85 text-foreground hover:border-primary/35 hover:bg-surface-3/85",
-                      )}
-                      onClick={() => handleStoryPointSelect(value)}
-                    >
-                      {value}
-                    </motion.button>
-                  );
-                })}
-              </div>
-
-              {hideSecondaryMetrics ? (
-                <div className="rounded-lg border border-border/75 bg-surface-1/75 p-3 text-xs text-muted-foreground">
-                  Secondary metrics are hidden while pass/taco is selected.
-                </div>
-              ) : (
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <PlanningMetricSelector
-                    label="Complexity (1-5)"
-                    value={complexityVote}
+                return (
+                  <motion.button
+                    key={value}
+                    type="button"
                     disabled={disabled || isRevealed}
-                    onChange={handleComplexityChange}
-                  />
-                  <PlanningMetricSelector
-                    label="Time Consuming (1-5)"
-                    value={timeVote}
-                    disabled={disabled || isRevealed}
-                    onChange={handleTimeChange}
-                  />
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="rounded-xl border border-primary/35 bg-primary/12 p-4 text-sm text-foreground">
-              Facilitator pass mode active. Your vote defaults to{" "}
-              <span className="font-semibold">taco/pass</span> and you are excluded from averages
-              until you choose to participate.
+                    {...cardInteraction}
+                    animate={
+                      reducedMotion
+                        ? undefined
+                        : {
+                            y: isSelected ? -2 : 0,
+                            scale: isSelected ? 1.015 : 1,
+                          }
+                    }
+                    transition={motionTransitions.spring}
+                    className={cn(
+                      "h-14 overflow-hidden rounded-xl border text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
+                      isSelected
+                        ? "border-primary bg-primary/18 text-foreground shadow-[0_0_0_1px_var(--arena-accent-soft),0_12px_24px_rgba(2,6,23,0.24)] dark:shadow-[0_0_0_1px_var(--arena-accent-soft),0_12px_24px_rgba(2,6,23,0.46)]"
+                        : "border-border/75 bg-surface-2/85 text-foreground hover:border-primary/35 hover:bg-surface-3/85",
+                    )}
+                    onClick={() => handleStoryPointSelect(value)}
+                  >
+                    {value}
+                  </motion.button>
+                );
+              })}
             </div>
-          )}
+
+            {hideSecondaryMetrics ? (
+              <div className="rounded-lg border border-border/75 bg-surface-1/75 p-3 text-xs text-muted-foreground">
+                Secondary metrics are hidden while pass/taco is selected.
+              </div>
+            ) : (
+              <div className="grid gap-3 lg:grid-cols-2">
+                <PlanningMetricSelector
+                  label="Complexity (1-5)"
+                  value={complexityVote}
+                  disabled={disabled || isRevealed}
+                  onChange={handleComplexityChange}
+                />
+                <PlanningMetricSelector
+                  label="Time Consuming (1-5)"
+                  value={timeVote}
+                  disabled={disabled || isRevealed}
+                  onChange={handleTimeChange}
+                />
+              </div>
+            )}
+          </div>
         </Card>
       </motion.div>
 

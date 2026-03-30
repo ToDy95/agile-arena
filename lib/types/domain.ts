@@ -78,7 +78,6 @@ export type PlanningRoomState = {
   task: PlanningTask;
   isRevealed: boolean;
   votes: Record<string, PlanningEstimate>;
-  facilitatorParticipates: boolean;
   manualFinalEstimate: PlanningFinalEstimateValue | null;
   finalizedTasks: PlanningFinalizedTask[];
 };

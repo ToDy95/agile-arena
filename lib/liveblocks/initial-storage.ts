@@ -15,7 +15,6 @@ export function createInitialStorage(mode: RoomMode = "grooming"): RoomStorage {
       issueKey: null,
       taskUrl: null,
       isRevealed: false,
-      facilitatorParticipates: false,
       manualFinalEstimate: null,
       votes: new LiveMap<string, PlanningEstimate>(),
       estimatedTasks: new LiveMap<string, LiveObject<PlanningFinalizedTaskStorage>>(),

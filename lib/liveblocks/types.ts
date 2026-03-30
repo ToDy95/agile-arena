@@ -27,7 +27,6 @@ export type PlanningStorage = LiveObject<{
   issueKey: string | null;
   taskUrl: string | null;
   isRevealed: boolean;
-  facilitatorParticipates: boolean;
   manualFinalEstimate: PlanningFinalEstimateValue | null;
   votes: LiveMap<string, PlanningEstimate>;
   estimatedTasks: LiveMap<string, LiveObject<PlanningFinalizedTaskStorage>>;
