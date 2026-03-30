@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useMotionPreferences } from "@/hooks/use-motion-preferences";
+import { getItemRevealVariants, motionTransitions } from "@/lib/animations/presets";
 import { APP_NAME } from "@/lib/constants/app";
 
 type RoomHeaderProps = {
@@ -24,6 +27,8 @@ export function RoomHeader({ roomId, status }: RoomHeaderProps) {
   const [copied, setCopied] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [inviteUrl, setInviteUrl] = useState("");
+  const { reducedMotion } = useMotionPreferences();
+  const revealVariants = getItemRevealVariants(reducedMotion);
 
   useEffect(() => {
     if (!isInviteOpen || typeof window === "undefined") {
@@ -48,14 +53,29 @@ export function RoomHeader({ roomId, status }: RoomHeaderProps) {
   };
 
   return (
-    <header className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <motion.header
+      initial="hidden"
+      animate="show"
+      variants={revealVariants}
+      className="flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div className="space-y-1">
         <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">{APP_NAME}</p>
         <h1 className="text-lg font-semibold text-zinc-100 sm:text-xl">Room {roomId}</h1>
       </div>
 
       <div className="flex items-center gap-2">
-        <Badge className="border-zinc-700 bg-zinc-900 text-zinc-300">{status}</Badge>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={status}
+            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 5 }}
+            animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -5 }}
+            transition={motionTransitions.fast}
+          >
+            <Badge className="border-zinc-700 bg-zinc-900 text-zinc-300">{status}</Badge>
+          </motion.div>
+        </AnimatePresence>
 
         <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
           <DialogTrigger asChild>
@@ -80,6 +100,6 @@ export function RoomHeader({ roomId, status }: RoomHeaderProps) {
           </DialogContent>
         </Dialog>
       </div>
-    </header>
+    </motion.header>
   );
 }

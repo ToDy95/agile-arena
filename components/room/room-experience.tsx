@@ -1,8 +1,8 @@
 "use client";
 
 import { LiveMap, LiveObject } from "@liveblocks/client";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo } from "react";
-
 import { PlanningMode } from "@/components/planning/planning-mode";
 import { RetroMode } from "@/components/retro/retro-mode";
 import { ModeSelector } from "@/components/room/mode-selector";
@@ -10,6 +10,8 @@ import { PlayerStrip } from "@/components/room/player-strip";
 import { RoomHeader } from "@/components/room/room-header";
 import type { RoomPlayer } from "@/components/room/types";
 import { Card } from "@/components/ui/card";
+import { useMotionPreferences } from "@/hooks/use-motion-preferences";
+import { getItemRevealVariants, getModeSwapVariants } from "@/lib/animations/presets";
 import {
   useMutation,
   useMyPresence,
@@ -57,6 +59,9 @@ export function RoomExperience({
   currentNickname,
   currentColor,
 }: RoomExperienceProps) {
+  const { reducedMotion } = useMotionPreferences();
+  const itemReveal = getItemRevealVariants(reducedMotion);
+  const modeSwap = getModeSwapVariants(reducedMotion);
   const status = useStatus();
   const roomMode = useStorage((root) => root.mode) ?? "grooming";
   const planning = useStorage((root) => root.planning);
@@ -272,7 +277,7 @@ export function RoomExperience({
   }, [retroNotesMap]);
 
   return (
-    <div className="space-y-4">
+    <motion.div layout className="space-y-4">
       <RoomHeader roomId={roomId} status={mapStatusLabel(status)} />
       <PlayerStrip
         players={players}
@@ -281,67 +286,109 @@ export function RoomExperience({
       <ModeSelector mode={roomMode} disabled={!storageReady} onModeChange={setMode} />
 
       {!storageReady ? (
-        <Card className="space-y-2 border-amber-500/30 bg-amber-500/10 text-amber-100">
-          <p className="text-sm font-semibold">Waiting for realtime room state…</p>
-          <p className="text-sm text-amber-100/90">
-            {status === "disconnected"
-              ? "Room storage did not initialize. Check LIVEBLOCKS_SECRET_KEY in .env.local and restart dev server."
-              : "Connecting to Liveblocks and loading shared storage."}
-          </p>
-        </Card>
+        <motion.div variants={itemReveal} initial="hidden" animate="show">
+          <Card className="space-y-2 border-amber-500/30 bg-amber-500/10 text-amber-100">
+            <motion.p
+              className="text-sm font-semibold"
+              animate={
+                reducedMotion
+                  ? undefined
+                  : {
+                      opacity: [0.75, 1, 0.75],
+                    }
+              }
+              transition={
+                reducedMotion
+                  ? undefined
+                  : {
+                      duration: 1.5,
+                      repeat: Number.POSITIVE_INFINITY,
+                      ease: "easeInOut",
+                    }
+              }
+            >
+              Waiting for realtime room state...
+            </motion.p>
+            <p className="text-sm text-amber-100/90">
+              {status === "disconnected"
+                ? "Room storage did not initialize. Check LIVEBLOCKS_SECRET_KEY in .env.local and restart dev server."
+                : "Connecting to Liveblocks and loading shared storage."}
+            </p>
+          </Card>
+        </motion.div>
       ) : null}
 
-      {storageReady && roomMode === "grooming" ? (
-        <PlanningMode
-          players={players}
-          taskInput={planning?.taskInput ?? ""}
-          issueKey={planning?.issueKey ?? null}
-          votes={votes}
-          isRevealed={planning?.isRevealed ?? false}
-          myVote={myVote}
-          disabled={!storageReady}
-          onTaskChange={updateTask}
-          onVoteSelect={(vote) => castVote(currentUserId, vote)}
-          onRevealVotes={revealVotes}
-          onResetRound={resetRound}
-          onClearTask={clearTask}
-        />
-      ) : null}
+      <AnimatePresence mode="wait" initial={false}>
+        {storageReady && roomMode === "grooming" ? (
+          <motion.div
+            key="mode-grooming"
+            layout
+            variants={modeSwap}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+          >
+            <PlanningMode
+              players={players}
+              taskInput={planning?.taskInput ?? ""}
+              issueKey={planning?.issueKey ?? null}
+              votes={votes}
+              isRevealed={planning?.isRevealed ?? false}
+              myVote={myVote}
+              disabled={!storageReady}
+              onTaskChange={updateTask}
+              onVoteSelect={(vote) => castVote(currentUserId, vote)}
+              onRevealVotes={revealVotes}
+              onResetRound={resetRound}
+              onClearTask={clearTask}
+            />
+          </motion.div>
+        ) : null}
 
-      {storageReady && roomMode === "retro" ? (
-        <RetroMode
-          notes={retroNotes}
-          currentUserId={currentUserId}
-          onAddNote={(column, text) =>
-            addRetroNote({
-              text,
-              column,
-              authorId: currentUserId,
-              authorNickname: currentNickname,
-              authorColor: currentColor,
-            })
-          }
-          onEditNote={(noteId, text) =>
-            editRetroNote({
-              noteId,
-              userId: currentUserId,
-              text,
-            })
-          }
-          onDeleteNote={(noteId) =>
-            deleteRetroNote({
-              noteId,
-              userId: currentUserId,
-            })
-          }
-          onToggleUpvote={(noteId) =>
-            toggleRetroUpvote({
-              noteId,
-              userId: currentUserId,
-            })
-          }
-        />
-      ) : null}
-    </div>
+        {storageReady && roomMode === "retro" ? (
+          <motion.div
+            key="mode-retro"
+            layout
+            variants={modeSwap}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+          >
+            <RetroMode
+              notes={retroNotes}
+              currentUserId={currentUserId}
+              onAddNote={(column, text) =>
+                addRetroNote({
+                  text,
+                  column,
+                  authorId: currentUserId,
+                  authorNickname: currentNickname,
+                  authorColor: currentColor,
+                })
+              }
+              onEditNote={(noteId, text) =>
+                editRetroNote({
+                  noteId,
+                  userId: currentUserId,
+                  text,
+                })
+              }
+              onDeleteNote={(noteId) =>
+                deleteRetroNote({
+                  noteId,
+                  userId: currentUserId,
+                })
+              }
+              onToggleUpvote={(noteId) =>
+                toggleRetroUpvote({
+                  noteId,
+                  userId: currentUserId,
+                })
+              }
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </motion.div>
   );
 }

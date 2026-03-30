@@ -1,4 +1,9 @@
-import { Card } from "@/components/ui/card";
+"use client";
+
+import { motion } from "motion/react";
+
+import { useMotionPreferences } from "@/hooks/use-motion-preferences";
+import { getCardInteractionProps, motionTransitions } from "@/lib/animations/presets";
 import type { RoomMode } from "@/lib/types/domain";
 import { cn } from "@/lib/utils/cn";
 
@@ -22,33 +27,43 @@ const MODE_META: Array<{ id: RoomMode; title: string; description: string }> = [
 ];
 
 export function ModeSelector({ mode, onModeChange, disabled = false }: ModeSelectorProps) {
+  const { reducedMotion } = useMotionPreferences();
+  const cardInteraction = getCardInteractionProps(reducedMotion);
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <motion.div layout className="grid gap-3 sm:grid-cols-2">
       {MODE_META.map((entry) => {
         const isActive = mode === entry.id;
 
         return (
-          <button
+          <motion.button
             key={entry.id}
             type="button"
+            layout
             disabled={disabled}
-            className={cn(disabled && "cursor-not-allowed opacity-60")}
+            className={cn(
+              "relative h-full rounded-2xl border px-4 py-4 text-left transition",
+              disabled && "cursor-not-allowed opacity-60",
+              isActive
+                ? "border-sky-500/70 bg-sky-500/10"
+                : "border-zinc-800 bg-zinc-900/70 hover:border-zinc-700",
+            )}
             onClick={() => onModeChange(entry.id)}
+            {...cardInteraction}
           >
-            <Card
-              className={cn(
-                "h-full text-left transition",
-                isActive
-                  ? "border-sky-500/70 bg-sky-500/10"
-                  : "border-zinc-800 bg-zinc-900/70 hover:border-zinc-700",
-              )}
-            >
-              <p className="text-sm font-semibold text-zinc-100">{entry.title}</p>
-              <p className="mt-1 text-sm text-zinc-400">{entry.description}</p>
-            </Card>
-          </button>
+            {isActive ? (
+              <motion.span
+                layoutId="agile-arena-mode-active-pill"
+                className="pointer-events-none absolute inset-0 rounded-2xl border border-sky-400/60"
+                transition={motionTransitions.spring}
+              />
+            ) : null}
+
+            <p className="relative text-sm font-semibold text-zinc-100">{entry.title}</p>
+            <p className="relative mt-1 text-sm text-zinc-400">{entry.description}</p>
+          </motion.button>
         );
       })}
-    </div>
+    </motion.div>
   );
 }

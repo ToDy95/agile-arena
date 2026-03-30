@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -7,6 +8,8 @@ import { RoomExperience } from "@/components/room/room-experience";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLocalIdentity } from "@/hooks/use-local-identity";
+import { useMotionPreferences } from "@/hooks/use-motion-preferences";
+import { getItemRevealVariants } from "@/lib/animations/presets";
 import { createInitialStorage } from "@/lib/liveblocks/initial-storage";
 import { RoomProvider } from "@/lib/liveblocks/room-context";
 import { nicknameSchema } from "@/lib/schemas/identity";
@@ -18,6 +21,8 @@ type RoomClientPageProps = {
 
 export function RoomClientPage({ roomId }: RoomClientPageProps) {
   const { identity, isReady, updateIdentity } = useLocalIdentity();
+  const { reducedMotion } = useMotionPreferences();
+  const itemReveal = getItemRevealVariants(reducedMotion);
 
   const parsedNickname = nicknameSchema.safeParse(identity.nickname);
   const nickname = parsedNickname.success ? parsedNickname.data : "";
@@ -36,7 +41,9 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
   if (!isReady) {
     return (
       <main className="min-h-screen bg-zinc-950 px-4 py-8 text-zinc-100 sm:px-8">
-        <Card className="mx-auto max-w-md text-center text-zinc-400">Loading room...</Card>
+        <motion.div variants={itemReveal} initial="hidden" animate="show">
+          <Card className="mx-auto max-w-md text-center text-zinc-400">Loading room...</Card>
+        </motion.div>
       </main>
     );
   }
@@ -44,15 +51,17 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
   if (!nickname) {
     return (
       <main className="min-h-screen bg-zinc-950 px-4 py-8 text-zinc-100 sm:px-8">
-        <Card className="mx-auto max-w-md space-y-4 text-center">
-          <h1 className="text-lg font-semibold text-zinc-100">Nickname required</h1>
-          <p className="text-sm text-zinc-400">
-            Set your nickname in the lobby before entering a room.
-          </p>
-          <Link href="/" className="inline-flex">
-            <Button>Back to lobby</Button>
-          </Link>
-        </Card>
+        <motion.div variants={itemReveal} initial="hidden" animate="show">
+          <Card className="mx-auto max-w-md space-y-4 text-center">
+            <h1 className="text-lg font-semibold text-zinc-100">Nickname required</h1>
+            <p className="text-sm text-zinc-400">
+              Set your nickname in the lobby before entering a room.
+            </p>
+            <Link href="/" className="inline-flex">
+              <Button>Back to lobby</Button>
+            </Link>
+          </Card>
+        </motion.div>
       </main>
     );
   }
@@ -60,7 +69,12 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
   return (
     <main className="min-h-screen bg-zinc-950 px-4 py-6 text-zinc-100 sm:px-8">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(14,165,233,0.14),transparent_35%),radial-gradient(circle_at_90%_20%,rgba(244,63,94,0.12),transparent_35%)]" />
-      <div className="relative mx-auto max-w-7xl">
+      <motion.div
+        variants={itemReveal}
+        initial="hidden"
+        animate="show"
+        className="relative mx-auto max-w-7xl"
+      >
         <RoomProvider
           id={roomId}
           initialPresence={{
@@ -79,7 +93,7 @@ export function RoomClientPage({ roomId }: RoomClientPageProps) {
             currentColor={resolvedColor}
           />
         </RoomProvider>
-      </div>
+      </motion.div>
     </main>
   );
 }
