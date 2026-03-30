@@ -26,18 +26,19 @@ import {
   useStorage,
   useUpdateMyPresence,
 } from "@/lib/liveblocks/room-context";
-import type { RetroNoteStorage } from "@/lib/liveblocks/types";
+import type { PlanningFinalizedTaskStorage, RetroNoteStorage } from "@/lib/liveblocks/types";
 import { normalizePlanningTaskInput } from "@/lib/schemas/planning";
 import {
   PLANNING_VOTE_VALUES,
   type PlanningEstimate,
   type PlanningFinalEstimateValue,
+  type PlanningFinalizedTask,
   type PlanningMetricValue,
   type RetroNote,
   type RoomMode,
 } from "@/lib/types/domain";
 import { normalizeHexColor } from "@/lib/utils/color";
-import { extractJiraIssueKey } from "@/lib/utils/jira";
+import { extractJiraIssueKey, extractJiraIssueUrl } from "@/lib/utils/jira";
 
 type RoomExperienceProps = {
   roomId: string;
@@ -168,6 +169,7 @@ export function RoomExperience({
   const facilitatorParticipates =
     useStorage((root) => root.planning.facilitatorParticipates) ?? false;
   const manualFinalEstimateRaw = useStorage((root) => root.planning.manualFinalEstimate);
+  const estimatedTasksMap = useStorage((root) => root.planning.estimatedTasks);
   const retroNotesMap = useStorage((root) => root.retro.notes);
   const others = useOthers();
   const self = useSelf();
@@ -197,7 +199,7 @@ export function RoomExperience({
     : null;
 
   const myVote = votes.get(currentUserId) ?? null;
-  const storageReady = planning !== null && retroNotesMap !== null;
+  const storageReady = planning !== null && estimatedTasksMap !== null && retroNotesMap !== null;
   const isOwner = roomOwnerId === currentUserId;
 
   const setMode = useMutation(({ storage, setMyPresence }, nextMode: RoomMode) => {
@@ -211,11 +213,20 @@ export function RoomExperience({
     }
 
     const planningRoot = storage.get("planning");
+    if (planningRoot.get("taskUrl") === undefined) {
+      planningRoot.set("taskUrl", null);
+    }
     if (planningRoot.get("facilitatorParticipates") === undefined) {
       planningRoot.set("facilitatorParticipates", false);
     }
     if (planningRoot.get("manualFinalEstimate") === undefined) {
       planningRoot.set("manualFinalEstimate", null);
+    }
+    if (planningRoot.get("estimatedTasks") === undefined) {
+      planningRoot.set(
+        "estimatedTasks",
+        new LiveMap<string, LiveObject<PlanningFinalizedTaskStorage>>(),
+      );
     }
 
     const retroRoot = storage.get("retro");
@@ -245,6 +256,7 @@ export function RoomExperience({
     const normalizedInput = normalizePlanningTaskInput(input);
     planningRoot.set("taskInput", normalizedInput);
     planningRoot.set("issueKey", extractJiraIssueKey(normalizedInput));
+    planningRoot.set("taskUrl", extractJiraIssueUrl(normalizedInput));
   }, []);
 
   const clearTask = useMutation(({ storage }, userId: string) => {
@@ -255,6 +267,7 @@ export function RoomExperience({
     const planningRoot = storage.get("planning");
     planningRoot.set("taskInput", "");
     planningRoot.set("issueKey", null);
+    planningRoot.set("taskUrl", null);
     planningRoot.set("manualFinalEstimate", null);
   }, []);
 
@@ -408,6 +421,7 @@ export function RoomExperience({
 
     planningRoot.set("taskInput", "");
     planningRoot.set("issueKey", null);
+    planningRoot.set("taskUrl", null);
     planningRoot.set("isRevealed", false);
     planningRoot.set("manualFinalEstimate", null);
 
@@ -423,6 +437,84 @@ export function RoomExperience({
     });
     setMyPresence({ hasVoted: true });
   }, []);
+
+  const finalizeTask = useMutation(
+    (
+      { storage, setMyPresence },
+      payload: {
+        userId: string;
+        finalizedByName: string;
+        finalEstimate: PlanningFinalEstimateValue;
+        lowerBound: number | null;
+        average: number | null;
+        upperBound: number | null;
+        interpretationLabel: string;
+        interpretationEmoji: string;
+      },
+    ) => {
+      if (storage.get("roomOwnerId") !== payload.userId) {
+        return;
+      }
+
+      const planningRoot = storage.get("planning");
+
+      if (!planningRoot.get("isRevealed")) {
+        return;
+      }
+
+      const voteMap = planningRoot.get("votes");
+      const taskId = crypto.randomUUID();
+      const taskInput = planningRoot.get("taskInput").trim();
+      const issueKey = planningRoot.get("issueKey");
+      const taskUrl = planningRoot.get("taskUrl");
+      const fallbackTitle =
+        taskInput.length > 0 ? taskInput : (issueKey ?? `Task ${new Date().toISOString()}`);
+
+      planningRoot.get("estimatedTasks").set(
+        taskId,
+        new LiveObject<PlanningFinalizedTaskStorage>({
+          id: taskId,
+          taskKey: issueKey,
+          taskUrl,
+          taskTitle: fallbackTitle,
+          lowerBound: payload.lowerBound,
+          average: payload.average,
+          upperBound: payload.upperBound,
+          finalEstimate: payload.finalEstimate,
+          interpretationLabel: payload.interpretationLabel,
+          interpretationEmoji: payload.interpretationEmoji,
+          finalizedAt: Date.now(),
+          finalizedBy: payload.userId,
+          finalizedByName: payload.finalizedByName,
+        }),
+      );
+
+      for (const key of voteMap.keys()) {
+        voteMap.delete(key);
+      }
+
+      planningRoot.set("taskInput", "");
+      planningRoot.set("issueKey", null);
+      planningRoot.set("taskUrl", null);
+      planningRoot.set("isRevealed", false);
+      planningRoot.set("manualFinalEstimate", null);
+
+      const facilitatorParticipatesInStorage = planningRoot.get("facilitatorParticipates") === true;
+
+      if (facilitatorParticipatesInStorage) {
+        setMyPresence({ hasVoted: false });
+        return;
+      }
+
+      voteMap.set(payload.userId, {
+        storyPoints: "taco",
+        complexity: null,
+        timeConsuming: null,
+      });
+      setMyPresence({ hasVoted: true });
+    },
+    [],
+  );
 
   const updateSessionNotes = useMutation(
     ({ storage }, payload: { userId: string; value: string }) => {
@@ -599,6 +691,30 @@ export function RoomExperience({
       });
   }, [others, roomOwnerId, self, votes]);
 
+  const estimatedTasks = useMemo<PlanningFinalizedTask[]>(() => {
+    if (!estimatedTasksMap) {
+      return [];
+    }
+
+    return Array.from(estimatedTasksMap.values())
+      .map((task) => ({
+        id: task.id,
+        taskKey: task.taskKey ?? null,
+        taskUrl: task.taskUrl ?? null,
+        taskTitle: task.taskTitle,
+        lowerBound: task.lowerBound ?? null,
+        average: task.average ?? null,
+        upperBound: task.upperBound ?? null,
+        finalEstimate: task.finalEstimate,
+        interpretationLabel: task.interpretationLabel,
+        interpretationEmoji: task.interpretationEmoji,
+        finalizedAt: task.finalizedAt,
+        finalizedBy: task.finalizedBy,
+        finalizedByName: task.finalizedByName,
+      }))
+      .sort((a, b) => a.finalizedAt - b.finalizedAt);
+  }, [estimatedTasksMap]);
+
   const retroNotes = useMemo<RetroNote[]>(() => {
     if (!retroNotesMap) {
       return [];
@@ -664,9 +780,11 @@ export function RoomExperience({
       planning: {
         taskInput: planning?.taskInput ?? "",
         issueKey: planning?.issueKey ?? null,
+        taskUrl: planning?.taskUrl ?? null,
         isRevealed: planning?.isRevealed ?? false,
         facilitatorParticipates,
         manualFinalEstimate,
+        finalizedTasks: estimatedTasks,
         votes,
         players: players.map((player) => ({
           userId: player.userId,
@@ -756,6 +874,7 @@ export function RoomExperience({
               isCurrentUserFacilitator={isOwner}
               facilitatorParticipates={facilitatorParticipates}
               manualFinalEstimate={manualFinalEstimate}
+              estimatedTasks={estimatedTasks}
               disabled={!storageReady}
               onTaskChange={updateTask}
               onVoteSelect={(vote) => castVote(currentUserId, vote)}
@@ -763,6 +882,13 @@ export function RoomExperience({
               onResetRound={() => resetRound(currentUserId)}
               onClearTask={() => clearTask(currentUserId)}
               onNextTask={() => nextTask(currentUserId)}
+              onFinalizeTask={(payload) =>
+                finalizeTask({
+                  userId: currentUserId,
+                  finalizedByName: currentNickname,
+                  ...payload,
+                })
+              }
               onFacilitatorParticipationChange={(participates) =>
                 setFacilitatorParticipation({
                   userId: currentUserId,

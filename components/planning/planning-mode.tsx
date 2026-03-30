@@ -3,9 +3,10 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 
+import { PlanningEstimatedTaskList } from "@/components/planning/planning-estimated-task-list";
 import { PlanningLegend } from "@/components/planning/planning-legend";
 import { PlanningMetricSelector } from "@/components/planning/planning-metric-selector";
-import { PlanningSummary } from "@/components/planning/planning-summary";
+import { PlanningResultPicker } from "@/components/planning/planning-result-picker";
 import type { RoomPlayer } from "@/components/room/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,17 +22,15 @@ import { PLANNING_DECK } from "@/lib/constants/planning";
 import type {
   PlanningEstimate,
   PlanningFinalEstimateValue,
+  PlanningFinalizedTask,
   PlanningMetricValue,
   PlanningVoteValue,
 } from "@/lib/types/domain";
 import { cn } from "@/lib/utils/cn";
 import {
-  calculatePlanningAverages,
   calculateStoryPointSummary,
-  derivePlanningMood,
   formatVoteAverage,
   getStoryPointInterpretation,
-  resolveFinalEstimate,
 } from "@/lib/utils/votes";
 
 type PlanningModeProps = {
@@ -45,6 +44,7 @@ type PlanningModeProps = {
   isCurrentUserFacilitator: boolean;
   facilitatorParticipates: boolean;
   manualFinalEstimate: PlanningFinalEstimateValue | null;
+  estimatedTasks: PlanningFinalizedTask[];
   disabled?: boolean;
   onTaskChange: (value: string) => void;
   onVoteSelect: (value: PlanningEstimate) => void;
@@ -52,6 +52,14 @@ type PlanningModeProps = {
   onResetRound: () => void;
   onClearTask: () => void;
   onNextTask: () => void;
+  onFinalizeTask: (payload: {
+    finalEstimate: PlanningFinalEstimateValue;
+    lowerBound: number | null;
+    average: number | null;
+    upperBound: number | null;
+    interpretationLabel: string;
+    interpretationEmoji: string;
+  }) => void;
   onFacilitatorParticipationChange: (value: boolean) => void;
   onManualFinalEstimateChange: (value: PlanningFinalEstimateValue | null) => void;
 };
@@ -70,6 +78,7 @@ export function PlanningMode({
   isCurrentUserFacilitator,
   facilitatorParticipates,
   manualFinalEstimate,
+  estimatedTasks,
   disabled = false,
   onTaskChange,
   onVoteSelect,
@@ -77,6 +86,7 @@ export function PlanningMode({
   onResetRound,
   onClearTask,
   onNextTask,
+  onFinalizeTask,
   onFacilitatorParticipationChange,
   onManualFinalEstimateChange,
 }: PlanningModeProps) {
@@ -126,46 +136,23 @@ export function PlanningMode({
         .map(([, estimate]) => estimate),
     [estimatorIds, votes],
   );
-  const planningAverages = useMemo(() => calculatePlanningAverages(revealedVotes), [revealedVotes]);
   const storyPointSummary = useMemo(
     () => calculateStoryPointSummary(revealedVotes.map((estimate) => estimate.storyPoints)),
     [revealedVotes],
   );
-
-  const storyPointAverageLabel = useMemo(
+  const averageLabel = useMemo(
     () => formatVoteAverage(storyPointSummary.average),
     [storyPointSummary.average],
   );
-  const storyPointLowerLabel =
-    storyPointSummary.lowerBound === null ? "-" : String(storyPointSummary.lowerBound);
-  const storyPointUpperLabel =
-    storyPointSummary.upperBound === null ? "-" : String(storyPointSummary.upperBound);
-  const complexityAverageLabel = useMemo(
-    () => formatVoteAverage(planningAverages.complexity),
-    [planningAverages.complexity],
-  );
-  const timeAverageLabel = useMemo(
-    () => formatVoteAverage(planningAverages.timeConsuming),
-    [planningAverages.timeConsuming],
-  );
-  const moodLabel = useMemo(() => derivePlanningMood(planningAverages), [planningAverages]);
 
-  const resolvedFinalEstimate = useMemo(
-    () => resolveFinalEstimate(storyPointSummary.suggestedEstimate, manualFinalEstimate),
-    [manualFinalEstimate, storyPointSummary.suggestedEstimate],
-  );
-  const interpretation = useMemo(
-    () => getStoryPointInterpretation(isRevealed ? resolvedFinalEstimate : null),
-    [isRevealed, resolvedFinalEstimate],
-  );
-  const taskLabel = useMemo(() => {
-    if (issueKey) {
-      return issueKey;
-    }
-
-    const trimmed = taskInput.trim();
-    return trimmed.length > 0 ? trimmed : "No task selected";
-  }, [issueKey, taskInput]);
+  const lowerEstimate =
+    storyPointSummary.lowerBound === null
+      ? null
+      : (String(storyPointSummary.lowerBound) as PlanningFinalEstimateValue);
+  const upperEstimate =
+    storyPointSummary.upperBound === null
+      ? null
+      : (String(storyPointSummary.upperBound) as PlanningFinalEstimateValue);
 
   const statusLabel = isRevealed
     ? "Revealed"
@@ -220,6 +207,23 @@ export function PlanningMode({
       ...myVote,
       complexity: myVote.complexity ?? complexityVote,
       timeConsuming: value,
+    });
+  };
+
+  const handleFinalizeTask = () => {
+    if (!manualFinalEstimate) {
+      return;
+    }
+
+    const interpretation = getStoryPointInterpretation(manualFinalEstimate);
+
+    onFinalizeTask({
+      finalEstimate: manualFinalEstimate,
+      lowerBound: storyPointSummary.lowerBound,
+      average: storyPointSummary.average,
+      upperBound: storyPointSummary.upperBound,
+      interpretationLabel: interpretation.label,
+      interpretationEmoji: interpretation.emoji,
     });
   };
 
@@ -285,23 +289,16 @@ export function PlanningMode({
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Round Controls
             </p>
-            <PlanningSummary
+            <PlanningResultPicker
               isRevealed={isRevealed}
-              taskLabel={taskLabel}
-              storyPointLowerLabel={storyPointLowerLabel}
-              storyPointAverageLabel={storyPointAverageLabel}
-              storyPointUpperLabel={storyPointUpperLabel}
-              suggestedEstimate={storyPointSummary.suggestedEstimate}
-              manualFinalEstimate={manualFinalEstimate}
-              resolvedFinalEstimate={resolvedFinalEstimate}
-              complexityAverageLabel={complexityAverageLabel}
-              timeAverageLabel={timeAverageLabel}
-              moodLabel={moodLabel}
-              interpretationEmoji={interpretation.emoji}
-              interpretationLabel={interpretation.label}
-              interpretationDescription={interpretation.description}
+              lowerEstimate={lowerEstimate}
+              averageLabel={averageLabel}
+              upperEstimate={upperEstimate}
+              selectedFinalEstimate={manualFinalEstimate}
               canManageRound={canManageRound}
-              onManualFinalEstimateChange={onManualFinalEstimateChange}
+              disabled={disabled}
+              onSelectEstimate={onManualFinalEstimateChange}
+              onFinalizeTask={handleFinalizeTask}
             />
 
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
@@ -330,25 +327,17 @@ export function PlanningMode({
                 Clear task
               </Button>
 
-              {!canManageRound ? (
-                <p className="text-xs text-muted-foreground">
-                  Only the facilitator can reveal and manage rounds.
-                </p>
+              {isRevealed && canManageRound ? (
+                <Button variant="ghost" disabled={disabled} onClick={onNextTask}>
+                  Next task without saving
+                </Button>
               ) : null}
 
-              <AnimatePresence initial={false}>
-                {isRevealed && canManageRound ? (
-                  <motion.div
-                    key="next-task"
-                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
-                    animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                    transition={motionTransitions.fast}
-                  >
-                    <Button onClick={onNextTask}>Next task</Button>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+              {!canManageRound ? (
+                <p className="text-xs text-muted-foreground">
+                  Only the facilitator can reveal and finalize tasks.
+                </p>
+              ) : null}
             </div>
           </div>
         </Card>
@@ -455,6 +444,8 @@ export function PlanningMode({
           )}
         </Card>
       </motion.div>
+
+      <PlanningEstimatedTaskList tasks={estimatedTasks} />
     </motion.div>
   );
 }

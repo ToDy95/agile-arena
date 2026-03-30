@@ -1,4 +1,9 @@
-import type { PlanningEstimate, PlanningFinalEstimateValue, RetroNote } from "@/lib/types/domain";
+import type {
+  PlanningEstimate,
+  PlanningFinalEstimateValue,
+  PlanningFinalizedTask,
+  RetroNote,
+} from "@/lib/types/domain";
 import {
   calculatePlanningAverages,
   calculateStoryPointSummary,
@@ -21,9 +26,11 @@ export type SessionExportSnapshot = {
   planning: {
     taskInput: string;
     issueKey: string | null;
+    taskUrl: string | null;
     isRevealed: boolean;
     facilitatorParticipates: boolean;
     manualFinalEstimate: PlanningFinalEstimateValue | null;
+    finalizedTasks: PlanningFinalizedTask[];
     votes: ReadonlyMap<string, PlanningEstimate>;
     players: SessionExportPlayer[];
   };
@@ -41,6 +48,7 @@ const EXPORT_COLUMNS = [
   "exportedAt",
   "taskIssueKey",
   "taskInput",
+  "taskUrl",
   "planningRevealed",
   "facilitatorParticipates",
   "storyPointLower",
@@ -52,6 +60,17 @@ const EXPORT_COLUMNS = [
   "avgComplexity",
   "avgTimeConsuming",
   "taskMood",
+  "finalizedTaskId",
+  "finalizedTaskKey",
+  "finalizedTaskUrl",
+  "finalizedTaskTitle",
+  "finalizedLowerBound",
+  "finalizedAverage",
+  "finalizedUpperBound",
+  "finalizedEstimate",
+  "finalizedInterpretation",
+  "finalizedBy",
+  "finalizedAt",
   "participantId",
   "participantName",
   "participantStoryPoints",
@@ -118,6 +137,7 @@ export function buildSessionExportCsv(snapshot: SessionExportSnapshot): string {
     exportedAt: toIso(snapshot.exportedAt),
     taskIssueKey: snapshot.planning.issueKey,
     taskInput: snapshot.planning.taskInput,
+    taskUrl: snapshot.planning.taskUrl,
     planningRevealed: snapshot.planning.isRevealed,
     facilitatorParticipates: snapshot.planning.facilitatorParticipates,
     storyPointLower: storyPointSummary.lowerBound,
@@ -140,6 +160,7 @@ export function buildSessionExportCsv(snapshot: SessionExportSnapshot): string {
       exportedAt: toIso(snapshot.exportedAt),
       taskIssueKey: snapshot.planning.issueKey,
       taskInput: snapshot.planning.taskInput,
+      taskUrl: snapshot.planning.taskUrl,
       planningRevealed: snapshot.planning.isRevealed,
       facilitatorParticipates: snapshot.planning.facilitatorParticipates,
       storyPointLower: storyPointSummary.lowerBound,
@@ -153,6 +174,32 @@ export function buildSessionExportCsv(snapshot: SessionExportSnapshot): string {
       participantStoryPoints: player.vote?.storyPoints ?? "",
       participantComplexity: player.vote?.complexity ?? "",
       participantTimeConsuming: player.vote?.timeConsuming ?? "",
+    });
+  });
+
+  snapshot.planning.finalizedTasks.forEach((task) => {
+    rows.push({
+      section: "grooming",
+      recordType: "finalizedTask",
+      roomId: snapshot.roomId,
+      roomOwner: snapshot.roomOwnerName,
+      exportedAt: toIso(snapshot.exportedAt),
+      finalizedTaskId: task.id,
+      finalizedTaskKey: task.taskKey,
+      finalizedTaskUrl: task.taskUrl,
+      finalizedTaskTitle: task.taskTitle,
+      finalizedLowerBound: task.lowerBound,
+      finalizedAverage:
+        task.average === null
+          ? ""
+          : Number.isInteger(task.average)
+            ? String(task.average)
+            : task.average.toFixed(1),
+      finalizedUpperBound: task.upperBound,
+      finalizedEstimate: task.finalEstimate,
+      finalizedInterpretation: `${task.interpretationEmoji} ${task.interpretationLabel}`,
+      finalizedBy: task.finalizedByName,
+      finalizedAt: toIso(task.finalizedAt),
     });
   });
 

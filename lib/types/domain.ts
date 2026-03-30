@@ -55,6 +55,23 @@ export type RoomPresence = UserIdentity & {
 export type PlanningTask = {
   input: string;
   issueKey: string | null;
+  issueUrl: string | null;
+};
+
+export type PlanningFinalizedTask = {
+  id: string;
+  taskKey: string | null;
+  taskUrl: string | null;
+  taskTitle: string;
+  lowerBound: number | null;
+  average: number | null;
+  upperBound: number | null;
+  finalEstimate: PlanningFinalEstimateValue;
+  interpretationLabel: string;
+  interpretationEmoji: string;
+  finalizedAt: number;
+  finalizedBy: string;
+  finalizedByName: string;
 };
 
 export type PlanningRoomState = {
@@ -63,6 +80,7 @@ export type PlanningRoomState = {
   votes: Record<string, PlanningEstimate>;
   facilitatorParticipates: boolean;
   manualFinalEstimate: PlanningFinalEstimateValue | null;
+  finalizedTasks: PlanningFinalizedTask[];
 };
 
 export type RetroNoteVoteMap = Record<string, true>;

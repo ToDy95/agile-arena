@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { extractJiraIssueKey } from "@/lib/utils/jira";
+import { extractJiraIssueKey, extractJiraIssueUrl } from "@/lib/utils/jira";
 
 describe("extractJiraIssueKey", () => {
   it("extracts an issue key from Jira browse URL", () => {
@@ -13,5 +13,17 @@ describe("extractJiraIssueKey", () => {
 
   it("returns null for invalid text", () => {
     expect(extractJiraIssueKey("no issue id here")).toBeNull();
+  });
+
+  it("extracts canonical Jira browse URL", () => {
+    expect(
+      extractJiraIssueUrl(
+        "https://company.atlassian.net/browse/BWR-352?atlOrigin=eyJpIjoiIiwicCI6ImMifQ==",
+      ),
+    ).toBe("https://company.atlassian.net/browse/BWR-352");
+  });
+
+  it("returns null when Jira browse URL is missing", () => {
+    expect(extractJiraIssueUrl("see docs at https://example.com/path")).toBeNull();
   });
 });
