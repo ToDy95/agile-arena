@@ -6,6 +6,7 @@ export type RoomPlayer = {
   nickname: string;
   color: string;
   isSelf: boolean;
+  isOwner: boolean;
   hasVoted: boolean;
   vote: PlanningEstimate | null;
 };

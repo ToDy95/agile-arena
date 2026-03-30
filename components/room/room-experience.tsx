@@ -13,6 +13,11 @@ import { Card } from "@/components/ui/card";
 import { useMotionPreferences } from "@/hooks/use-motion-preferences";
 import { getItemRevealVariants, getModeSwapVariants } from "@/lib/animations/presets";
 import {
+  buildSessionExportCsv,
+  createSessionExportFilename,
+  downloadCsv,
+} from "@/lib/export/session-export";
+import {
   useMutation,
   useMyPresence,
   useOthers,
@@ -119,6 +124,9 @@ export function RoomExperience({
   const modeSwap = getModeSwapVariants(reducedMotion);
   const status = useStatus();
   const roomMode = useStorage((root) => root.mode) ?? "grooming";
+  const roomOwnerId = useStorage((root) => root.roomOwnerId) ?? null;
+  const retroAnonymousMode = useStorage((root) => root.settings?.retroAnonymousMode) ?? false;
+  const sessionNotes = useStorage((root) => root.retro.sessionNotes) ?? "";
   const planning = useStorage((root) => root.planning);
   const retroNotesMap = useStorage((root) => root.retro.notes);
   const others = useOthers();
@@ -146,10 +154,39 @@ export function RoomExperience({
 
   const myVote = votes.get(currentUserId) ?? null;
   const storageReady = planning !== null && retroNotesMap !== null;
+  const isOwner = roomOwnerId === currentUserId;
 
   const setMode = useMutation(({ storage, setMyPresence }, nextMode: RoomMode) => {
     storage.set("mode", nextMode);
     setMyPresence({ mode: nextMode });
+  }, []);
+
+  const ensureRoomMetadata = useMutation(({ storage }, userId: string) => {
+    if (!storage.get("roomOwnerId")) {
+      storage.set("roomOwnerId", userId);
+    }
+
+    let settings = storage.get("settings");
+
+    if (!settings) {
+      settings = new LiveObject({
+        retroAnonymousMode: false,
+      });
+      storage.set("settings", settings);
+    }
+
+    const retroRoot = storage.get("retro");
+    const notesMap = retroRoot.get("notes");
+
+    if (retroRoot.get("sessionNotes") === undefined) {
+      retroRoot.set("sessionNotes", "");
+    }
+
+    notesMap.forEach((note) => {
+      if (note.get("status") === undefined) {
+        note.set("status", "open");
+      }
+    });
   }, []);
 
   const updateTask = useMutation(({ storage }, input: string) => {
@@ -159,7 +196,11 @@ export function RoomExperience({
     planningRoot.set("issueKey", extractJiraIssueKey(normalizedInput));
   }, []);
 
-  const clearTask = useMutation(({ storage }) => {
+  const clearTask = useMutation(({ storage }, userId: string) => {
+    if (storage.get("roomOwnerId") !== userId) {
+      return;
+    }
+
     const planningRoot = storage.get("planning");
     planningRoot.set("taskInput", "");
     planningRoot.set("issueKey", null);
@@ -175,11 +216,19 @@ export function RoomExperience({
     [],
   );
 
-  const revealVotes = useMutation(({ storage }) => {
+  const revealVotes = useMutation(({ storage }, userId: string) => {
+    if (storage.get("roomOwnerId") !== userId) {
+      return;
+    }
+
     storage.get("planning").set("isRevealed", true);
   }, []);
 
-  const resetRound = useMutation(({ storage, setMyPresence }) => {
+  const resetRound = useMutation(({ storage, setMyPresence }, userId: string) => {
+    if (storage.get("roomOwnerId") !== userId) {
+      return;
+    }
+
     const planningRoot = storage.get("planning");
     const voteMap = planningRoot.get("votes");
 
@@ -191,7 +240,11 @@ export function RoomExperience({
     setMyPresence({ hasVoted: false });
   }, []);
 
-  const nextTask = useMutation(({ storage, setMyPresence }) => {
+  const nextTask = useMutation(({ storage, setMyPresence }, userId: string) => {
+    if (storage.get("roomOwnerId") !== userId) {
+      return;
+    }
+
     const planningRoot = storage.get("planning");
     const voteMap = planningRoot.get("votes");
 
@@ -204,6 +257,37 @@ export function RoomExperience({
     planningRoot.set("isRevealed", false);
     setMyPresence({ hasVoted: false });
   }, []);
+
+  const setRetroAnonymousMode = useMutation(
+    ({ storage }, payload: { userId: string; enabled: boolean }) => {
+      if (storage.get("roomOwnerId") !== payload.userId) {
+        return;
+      }
+
+      let settings = storage.get("settings");
+
+      if (!settings) {
+        settings = new LiveObject({
+          retroAnonymousMode: false,
+        });
+        storage.set("settings", settings);
+      }
+
+      settings.set("retroAnonymousMode", payload.enabled);
+    },
+    [],
+  );
+
+  const updateSessionNotes = useMutation(
+    ({ storage }, payload: { userId: string; value: string }) => {
+      if (storage.get("roomOwnerId") !== payload.userId) {
+        return;
+      }
+
+      storage.get("retro").set("sessionNotes", payload.value);
+    },
+    [],
+  );
 
   const addRetroNote = useMutation(
     (
@@ -226,6 +310,7 @@ export function RoomExperience({
           id: noteId,
           text: note.text,
           column: note.column,
+          status: "open",
           authorId: note.authorId,
           authorNickname: note.authorNickname,
           authorColor: note.authorColor,
@@ -287,6 +372,24 @@ export function RoomExperience({
     [],
   );
 
+  const toggleRetroSolved = useMutation(
+    ({ storage }, payload: { noteId: string; userId: string; solved: boolean }) => {
+      if (storage.get("roomOwnerId") !== payload.userId) {
+        return;
+      }
+
+      const note = storage.get("retro").get("notes").get(payload.noteId);
+
+      if (!note) {
+        return;
+      }
+
+      note.set("status", payload.solved ? "solved" : "open");
+      note.set("updatedAt", Date.now());
+    },
+    [],
+  );
+
   useEffect(() => {
     if (myPresence.mode === roomMode && myPresence.hasVoted === (myVote !== null)) {
       return;
@@ -297,6 +400,14 @@ export function RoomExperience({
       hasVoted: myVote !== null,
     });
   }, [myPresence.hasVoted, myPresence.mode, myVote, roomMode, updateMyPresence]);
+
+  useEffect(() => {
+    if (!storageReady) {
+      return;
+    }
+
+    ensureRoomMetadata(currentUserId);
+  }, [currentUserId, ensureRoomMetadata, storageReady]);
 
   const players = useMemo<RoomPlayer[]>(() => {
     const everyone = self ? [self, ...others] : [...others];
@@ -314,6 +425,7 @@ export function RoomExperience({
           nickname,
           color,
           isSelf: self ? user.connectionId === self.connectionId : false,
+          isOwner: roomOwnerId === userId,
           hasVoted: vote !== null,
           vote,
         };
@@ -329,7 +441,7 @@ export function RoomExperience({
 
         return a.nickname.localeCompare(b.nickname);
       });
-  }, [others, self, votes]);
+  }, [others, roomOwnerId, self, votes]);
 
   const retroNotes = useMemo<RetroNote[]>(() => {
     if (!retroNotesMap) {
@@ -339,6 +451,7 @@ export function RoomExperience({
     return Array.from(retroNotesMap.values())
       .map((note) => {
         const upvotes: RetroNote["upvotes"] = {};
+        const status: RetroNote["status"] = note.status === "solved" ? "solved" : "open";
 
         note.upvotes.forEach((isUpvoted, userId) => {
           if (isUpvoted) {
@@ -347,16 +460,75 @@ export function RoomExperience({
         });
 
         return {
-          ...note,
+          id: note.id,
+          text: note.text,
+          authorId: note.authorId,
+          authorNickname: note.authorNickname,
+          authorColor: note.authorColor,
+          column: note.column,
+          createdAt: note.createdAt,
+          updatedAt: note.updatedAt,
           upvotes,
+          status,
         };
       })
       .sort((a, b) => a.createdAt - b.createdAt);
   }, [retroNotesMap]);
 
+  const roomOwnerName = useMemo(() => {
+    if (!roomOwnerId) {
+      return "Unassigned";
+    }
+
+    const owner = players.find((player) => player.userId === roomOwnerId);
+
+    if (owner) {
+      return owner.nickname;
+    }
+
+    return roomOwnerId === currentUserId ? currentNickname : "Owner";
+  }, [currentNickname, currentUserId, players, roomOwnerId]);
+
+  const exportSessionCsv = () => {
+    if (!isOwner) {
+      return;
+    }
+
+    const csv = buildSessionExportCsv({
+      roomId,
+      roomOwnerId,
+      roomOwnerName,
+      exportedAt: Date.now(),
+      planning: {
+        taskInput: planning?.taskInput ?? "",
+        issueKey: planning?.issueKey ?? null,
+        isRevealed: planning?.isRevealed ?? false,
+        votes,
+        players: players.map((player) => ({
+          userId: player.userId,
+          nickname: player.nickname,
+          vote: player.vote,
+        })),
+      },
+      retro: {
+        anonymousMode: retroAnonymousMode,
+        sessionNotes,
+        notes: retroNotes,
+      },
+    });
+
+    downloadCsv(createSessionExportFilename(roomId), csv);
+  };
+
   return (
     <motion.div layout className="space-y-4 overflow-x-clip">
-      <RoomHeader roomId={roomId} status={mapStatusLabel(status)} />
+      <RoomHeader
+        roomId={roomId}
+        status={mapStatusLabel(status)}
+        roomOwnerName={roomOwnerName}
+        isCurrentUserOwner={isOwner}
+        onExportCsv={exportSessionCsv}
+      />
       <PlayerStrip
         players={players}
         revealVotes={roomMode === "grooming" && Boolean(planning?.isRevealed)}
@@ -414,13 +586,14 @@ export function RoomExperience({
               votes={votes}
               isRevealed={planning?.isRevealed ?? false}
               myVote={myVote}
+              canManageRound={isOwner}
               disabled={!storageReady}
               onTaskChange={updateTask}
               onVoteSelect={(vote) => castVote(currentUserId, vote)}
-              onRevealVotes={revealVotes}
-              onResetRound={resetRound}
-              onClearTask={clearTask}
-              onNextTask={nextTask}
+              onRevealVotes={() => revealVotes(currentUserId)}
+              onResetRound={() => resetRound(currentUserId)}
+              onClearTask={() => clearTask(currentUserId)}
+              onNextTask={() => nextTask(currentUserId)}
             />
           </motion.div>
         ) : null}
@@ -438,6 +611,9 @@ export function RoomExperience({
             <RetroMode
               notes={retroNotes}
               currentUserId={currentUserId}
+              isOwner={isOwner}
+              anonymousMode={retroAnonymousMode}
+              sessionNotes={sessionNotes}
               onAddNote={(column, text) =>
                 addRetroNote({
                   text,
@@ -464,6 +640,25 @@ export function RoomExperience({
                 toggleRetroUpvote({
                   noteId,
                   userId: currentUserId,
+                })
+              }
+              onToggleSolved={(noteId, solved) =>
+                toggleRetroSolved({
+                  noteId,
+                  userId: currentUserId,
+                  solved,
+                })
+              }
+              onSetAnonymousMode={(enabled) =>
+                setRetroAnonymousMode({
+                  userId: currentUserId,
+                  enabled,
+                })
+              }
+              onUpdateSessionNotes={(value) =>
+                updateSessionNotes({
+                  userId: currentUserId,
+                  value,
                 })
               }
             />

@@ -21,16 +21,24 @@ import { cn } from "@/lib/utils/cn";
 type RetroModeProps = {
   notes: RetroNote[];
   currentUserId: string;
+  isOwner: boolean;
+  anonymousMode: boolean;
+  sessionNotes: string;
   onAddNote: (column: RetroColumn, text: string) => void;
   onEditNote: (noteId: string, text: string) => void;
   onDeleteNote: (noteId: string) => void;
   onToggleUpvote: (noteId: string) => void;
+  onToggleSolved: (noteId: string, solved: boolean) => void;
+  onSetAnonymousMode: (enabled: boolean) => void;
+  onUpdateSessionNotes: (value: string) => void;
 };
 
 type RetroColumnLaneProps = {
   column: RetroColumn;
   notes: RetroNote[];
   currentUserId: string;
+  isOwner: boolean;
+  anonymousMode: boolean;
   draftText: string;
   composerOpen: boolean;
   editingNoteId: string | null;
@@ -44,12 +52,15 @@ type RetroColumnLaneProps = {
   onSaveEdit: (noteId: string) => void;
   onDeleteNote: (noteId: string) => void;
   onToggleUpvote: (noteId: string) => void;
+  onToggleSolved: (noteId: string, solved: boolean) => void;
 };
 
 function RetroColumnLane({
   column,
   notes,
   currentUserId,
+  isOwner,
+  anonymousMode,
   draftText,
   composerOpen,
   editingNoteId,
@@ -63,6 +74,7 @@ function RetroColumnLane({
   onSaveEdit,
   onDeleteNote,
   onToggleUpvote,
+  onToggleSolved,
 }: RetroColumnLaneProps) {
   const { reducedMotion } = useMotionPreferences();
   const [notesParentRef] = useAutoAnimate<HTMLDivElement>({
@@ -141,19 +153,38 @@ function RetroColumnLane({
           const isEditing = editingNoteId === note.id;
           const voteCount = Object.keys(note.upvotes).length;
           const hasUpvoted = Boolean(note.upvotes[currentUserId]);
+          const isSolved = note.status === "solved";
+          const authorLabel = anonymousMode ? "Anonymous" : note.authorNickname;
 
           return (
             <motion.div
               key={note.id}
               layout
-              className="overflow-hidden rounded-xl border border-border/75 bg-surface-1/80 p-3"
+              className={cn(
+                "overflow-hidden rounded-xl border bg-surface-1/80 p-3",
+                isSolved ? "border-emerald-500/35 bg-emerald-500/8 opacity-80" : "border-border/75",
+              )}
               {...cardInteraction}
             >
               <div className="mb-2 flex items-start justify-between gap-2">
-                <p className="text-xs text-muted-foreground">
-                  <span style={{ color: note.authorColor }}>{note.authorNickname}</span>
-                </p>
-                <div className="flex items-center gap-1">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    <span style={{ color: anonymousMode ? undefined : note.authorColor }}>
+                      {authorLabel}
+                    </span>
+                  </p>
+                  <p
+                    className={cn(
+                      "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]",
+                      isSolved
+                        ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-200"
+                        : "border-border/75 bg-surface-2/80 text-muted-foreground",
+                    )}
+                  >
+                    {isSolved ? "Solved" : "Open"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-1">
                   <Button
                     size="sm"
                     variant={hasUpvoted ? "primary" : "ghost"}
@@ -173,6 +204,15 @@ function RetroColumnLane({
                       </motion.span>
                     </AnimatePresence>
                   </Button>
+                  {isOwner ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onToggleSolved(note.id, !isSolved)}
+                    >
+                      {isSolved ? "Reopen" : "Solve"}
+                    </Button>
+                  ) : null}
                   {isAuthor ? (
                     <Button size="sm" variant="ghost" onClick={() => onDeleteNote(note.id)}>
                       Delete
@@ -215,6 +255,7 @@ function RetroColumnLane({
                     transition={motionTransitions.fast}
                     className={cn(
                       "w-full text-left text-sm text-foreground",
+                      isSolved && "line-through decoration-1 opacity-85",
                       isAuthor ? "cursor-pointer" : "cursor-default",
                     )}
                     onClick={() => {
@@ -240,10 +281,16 @@ function RetroColumnLane({
 export function RetroMode({
   notes,
   currentUserId,
+  isOwner,
+  anonymousMode,
+  sessionNotes,
   onAddNote,
   onDeleteNote,
   onEditNote,
   onToggleUpvote,
+  onToggleSolved,
+  onSetAnonymousMode,
+  onUpdateSessionNotes,
 }: RetroModeProps) {
   const { reducedMotion } = useMotionPreferences();
   const containerVariants = getContainerStaggerVariants(reducedMotion);
@@ -275,6 +322,11 @@ export function RetroMode({
       },
     );
   }, [notes]);
+
+  const solvedCount = useMemo(
+    () => notes.filter((note) => note.status === "solved").length,
+    [notes],
+  );
 
   const handleSubmitDraft = (column: RetroColumn) => {
     const trimmed = drafts[column].trim();
@@ -310,50 +362,102 @@ export function RetroMode({
   };
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="show"
-      className="grid gap-3 lg:grid-cols-3"
-    >
-      {(Object.keys(RETRO_COLUMN_META) as RetroColumn[]).map((column) => (
-        <motion.div key={column} variants={itemReveal} layout>
-          <RetroColumnLane
-            column={column}
-            notes={notesByColumn[column]}
-            currentUserId={currentUserId}
-            draftText={drafts[column]}
-            composerOpen={composerOpen[column]}
-            editingNoteId={editingNoteId}
-            editingText={editingText}
-            onDraftChange={(nextColumn, value) =>
-              setDrafts((current) => ({
-                ...current,
-                [nextColumn]: value,
-              }))
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4">
+      <motion.div variants={itemReveal}>
+        <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Retro Controls
+            </p>
+            <p className="text-sm text-foreground/90">
+              {solvedCount}/{notes.length} topics solved
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs text-muted-foreground">
+              Anonymous mode:{" "}
+              <span className="font-semibold text-foreground">{anonymousMode ? "On" : "Off"}</span>
+            </p>
+            {isOwner ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onSetAnonymousMode(!anonymousMode)}
+              >
+                {anonymousMode ? "Disable anonymous" : "Enable anonymous"}
+              </Button>
+            ) : (
+              <p className="text-xs text-muted-foreground">Owner controls this setting.</p>
+            )}
+          </div>
+        </Card>
+      </motion.div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        {(Object.keys(RETRO_COLUMN_META) as RetroColumn[]).map((column) => (
+          <motion.div key={column} variants={itemReveal} layout>
+            <RetroColumnLane
+              column={column}
+              notes={notesByColumn[column]}
+              currentUserId={currentUserId}
+              isOwner={isOwner}
+              anonymousMode={anonymousMode}
+              draftText={drafts[column]}
+              composerOpen={composerOpen[column]}
+              editingNoteId={editingNoteId}
+              editingText={editingText}
+              onDraftChange={(nextColumn, value) =>
+                setDrafts((current) => ({
+                  ...current,
+                  [nextColumn]: value,
+                }))
+              }
+              onToggleComposer={(nextColumn, open) =>
+                setComposerOpen((current) => ({
+                  ...current,
+                  [nextColumn]: open,
+                }))
+              }
+              onSubmitDraft={handleSubmitDraft}
+              onStartEdit={(noteId, text) => {
+                setEditingNoteId(noteId);
+                setEditingText(text);
+              }}
+              onCancelEdit={() => {
+                setEditingNoteId(null);
+                setEditingText("");
+              }}
+              onEditChange={setEditingText}
+              onSaveEdit={handleSaveEdit}
+              onDeleteNote={handleDeleteNote}
+              onToggleUpvote={onToggleUpvote}
+              onToggleSolved={onToggleSolved}
+            />
+          </motion.div>
+        ))}
+      </div>
+
+      <motion.div variants={itemReveal}>
+        <Card className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Session Notes</p>
+          <Textarea
+            value={sessionNotes}
+            readOnly={!isOwner}
+            placeholder={
+              isOwner
+                ? "Facilitator summary: decisions, follow-ups, and next sprint focus..."
+                : "The room owner can add facilitator notes here."
             }
-            onToggleComposer={(nextColumn, open) =>
-              setComposerOpen((current) => ({
-                ...current,
-                [nextColumn]: open,
-              }))
-            }
-            onSubmitDraft={handleSubmitDraft}
-            onStartEdit={(noteId, text) => {
-              setEditingNoteId(noteId);
-              setEditingText(text);
-            }}
-            onCancelEdit={() => {
-              setEditingNoteId(null);
-              setEditingText("");
-            }}
-            onEditChange={setEditingText}
-            onSaveEdit={handleSaveEdit}
-            onDeleteNote={handleDeleteNote}
-            onToggleUpvote={onToggleUpvote}
+            className="min-h-28"
+            onChange={(event) => onUpdateSessionNotes(event.target.value)}
           />
-        </motion.div>
-      ))}
+          <p className="text-xs text-muted-foreground">
+            {isOwner
+              ? "Realtime notes are exported with retro results."
+              : "Read-only for participants. Managed by room owner."}
+          </p>
+        </Card>
+      </motion.div>
     </motion.div>
   );
 }

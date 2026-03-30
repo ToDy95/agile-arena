@@ -33,6 +33,7 @@ type PlanningModeProps = {
   votes: ReadonlyMap<string, PlanningEstimate>;
   isRevealed: boolean;
   myVote: PlanningEstimate | null;
+  canManageRound: boolean;
   disabled?: boolean;
   onTaskChange: (value: string) => void;
   onVoteSelect: (value: PlanningEstimate) => void;
@@ -52,6 +53,7 @@ export function PlanningMode({
   votes,
   isRevealed,
   myVote,
+  canManageRound,
   disabled = false,
   onTaskChange,
   onVoteSelect,
@@ -228,7 +230,7 @@ export function PlanningMode({
               <motion.div animate={revealReady ? getReadyPulseAnimation(reducedMotion) : undefined}>
                 <Button
                   variant="secondary"
-                  disabled={disabled || isRevealed || votedCount === 0}
+                  disabled={disabled || isRevealed || votedCount === 0 || !canManageRound}
                   onClick={onRevealVotes}
                   className={cn(revealReady && "border border-primary/45")}
                 >
@@ -236,16 +238,22 @@ export function PlanningMode({
                 </Button>
               </motion.div>
 
-              <Button variant="ghost" disabled={disabled} onClick={onResetRound}>
+              <Button variant="ghost" disabled={disabled || !canManageRound} onClick={onResetRound}>
                 Reset round
               </Button>
 
-              <Button variant="ghost" disabled={disabled} onClick={onClearTask}>
+              <Button variant="ghost" disabled={disabled || !canManageRound} onClick={onClearTask}>
                 Clear task
               </Button>
 
+              {!canManageRound ? (
+                <p className="text-xs text-muted-foreground">
+                  Only the room owner can reveal and manage rounds.
+                </p>
+              ) : null}
+
               <AnimatePresence initial={false}>
-                {isRevealed ? (
+                {isRevealed && canManageRound ? (
                   <motion.div
                     key="next-task"
                     initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}

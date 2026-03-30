@@ -229,10 +229,17 @@ export function PlayerStrip({ players, revealVotes }: PlayerStripProps) {
                     style={{ backgroundColor: player.color }}
                   />
                   <div className="pl-2">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {player.nickname}
-                      {player.isSelf ? " (You)" : ""}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {player.nickname}
+                        {player.isSelf ? " (You)" : ""}
+                      </p>
+                      {player.isOwner ? (
+                        <span className="rounded-full border border-primary/35 bg-primary/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
+                          Owner
+                        </span>
+                      ) : null}
+                    </div>
                     <VoteStatus
                       revealVotes={revealVotes}
                       vote={player.vote}

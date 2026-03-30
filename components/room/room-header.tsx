@@ -21,9 +21,18 @@ import { APP_NAME } from "@/lib/constants/app";
 type RoomHeaderProps = {
   roomId: string;
   status: string;
+  roomOwnerName: string;
+  isCurrentUserOwner: boolean;
+  onExportCsv: () => void;
 };
 
-export function RoomHeader({ roomId, status }: RoomHeaderProps) {
+export function RoomHeader({
+  roomId,
+  status,
+  roomOwnerName,
+  isCurrentUserOwner,
+  onExportCsv,
+}: RoomHeaderProps) {
   const [copied, setCopied] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [inviteUrl, setInviteUrl] = useState("");
@@ -62,10 +71,14 @@ export function RoomHeader({ roomId, status }: RoomHeaderProps) {
       <div className="space-y-1">
         <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{APP_NAME}</p>
         <h1 className="text-lg font-semibold text-foreground sm:text-xl">Room {roomId}</h1>
+        <p className="text-xs text-muted-foreground">
+          Owner: <span className="font-semibold text-foreground">{roomOwnerName}</span>
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         <ThemeToggle className="max-w-full" />
+        {isCurrentUserOwner ? <Badge variant="secondary">Owner controls</Badge> : null}
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={status}
@@ -77,6 +90,12 @@ export function RoomHeader({ roomId, status }: RoomHeaderProps) {
             <Badge>{status}</Badge>
           </motion.div>
         </AnimatePresence>
+
+        {isCurrentUserOwner ? (
+          <Button variant="secondary" onClick={onExportCsv}>
+            Export CSV
+          </Button>
+        ) : null}
 
         <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
           <DialogTrigger asChild>

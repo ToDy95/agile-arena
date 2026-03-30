@@ -31,6 +31,10 @@ export type PlanningEstimate = {
   researchUnknowns?: PlanningMetricValue;
 };
 
+export type RoomSettings = {
+  retroAnonymousMode: boolean;
+};
+
 export const RETRO_COLUMNS = ["wentWell", "toImprove", "actionItems"] as const;
 
 export type RetroColumn = (typeof RETRO_COLUMNS)[number];
@@ -59,6 +63,10 @@ export type PlanningRoomState = {
 
 export type RetroNoteVoteMap = Record<string, true>;
 
+export const RETRO_NOTE_STATUSES = ["open", "solved"] as const;
+
+export type RetroNoteStatus = (typeof RETRO_NOTE_STATUSES)[number];
+
 export type RetroNote = {
   id: string;
   text: string;
@@ -68,6 +76,7 @@ export type RetroNote = {
   column: RetroColumn;
   createdAt: number;
   updatedAt: number;
+  status: RetroNoteStatus;
   upvotes: RetroNoteVoteMap;
 };
 
