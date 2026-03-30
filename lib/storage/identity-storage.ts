@@ -1,3 +1,6 @@
+import { generateRandomAvatarConfig } from "@/lib/avatar/avatar-randomizer";
+import { readAvatarConfig, writeAvatarConfig } from "@/lib/avatar/avatar-storage";
+import { normalizeAvatarConfig } from "@/lib/avatar/avatar-utils";
 import { STORAGE_KEYS } from "@/lib/constants/app";
 import { storedIdentitySchema } from "@/lib/schemas/identity";
 import { parseRoomId } from "@/lib/schemas/room";
@@ -20,6 +23,7 @@ export function createDefaultIdentity(): StoredIdentity {
     userId: crypto.randomUUID(),
     nickname: "",
     color: generateRandomColor(),
+    avatar: generateRandomAvatarConfig(),
   };
 }
 
@@ -41,7 +45,14 @@ export function readIdentity(): StoredIdentity | null {
       return null;
     }
 
-    return parsed.data;
+    const fallbackAvatar = readAvatarConfig() ?? generateRandomAvatarConfig();
+
+    return {
+      userId: parsed.data.userId,
+      nickname: parsed.data.nickname,
+      color: parsed.data.color,
+      avatar: normalizeAvatarConfig(parsed.data.avatar ?? fallbackAvatar),
+    };
   } catch {
     return null;
   }
@@ -58,7 +69,15 @@ export function writeIdentity(identity: StoredIdentity): void {
     return;
   }
 
-  window.localStorage.setItem(STORAGE_KEYS.identity, JSON.stringify(parsed.data));
+  const normalizedIdentity: StoredIdentity = {
+    userId: parsed.data.userId,
+    nickname: parsed.data.nickname,
+    color: parsed.data.color,
+    avatar: normalizeAvatarConfig(parsed.data.avatar ?? identity.avatar),
+  };
+
+  window.localStorage.setItem(STORAGE_KEYS.identity, JSON.stringify(normalizedIdentity));
+  writeAvatarConfig(normalizedIdentity.avatar);
 }
 
 export function readLastRoomId(): string | null {

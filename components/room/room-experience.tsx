@@ -12,6 +12,7 @@ import type { RoomPlayer } from "@/components/room/types";
 import { Card } from "@/components/ui/card";
 import { useMotionPreferences } from "@/hooks/use-motion-preferences";
 import { getItemRevealVariants, getModeSwapVariants } from "@/lib/animations/presets";
+import { createDefaultAvatarConfig, normalizeAvatarConfig } from "@/lib/avatar/avatar-utils";
 import {
   buildSessionExportCsv,
   createSessionExportFilename,
@@ -591,6 +592,7 @@ export function RoomExperience({
         const userId = user.presence.userId || user.id;
         const nickname = user.presence.nickname || user.info?.nickname || "Player";
         const color = resolvePlayerColor(user.presence.color || user.info?.color);
+        const avatar = normalizeAvatarConfig(user.presence.avatar ?? createDefaultAvatarConfig());
         const vote = votes.get(userId) ?? null;
 
         return {
@@ -598,6 +600,7 @@ export function RoomExperience({
           userId,
           nickname,
           color,
+          avatar,
           isSelf: self ? user.connectionId === self.connectionId : false,
           isOwner: roomOwnerId === userId,
           hasVoted: vote !== null,

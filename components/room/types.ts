@@ -1,3 +1,4 @@
+import type { AvatarConfig } from "@/lib/avatar/avatar-types";
 import type { PlanningEstimate } from "@/lib/types/domain";
 
 export type RoomPlayer = {
@@ -5,6 +6,7 @@ export type RoomPlayer = {
   userId: string;
   nickname: string;
   color: string;
+  avatar: AvatarConfig;
   isSelf: boolean;
   isOwner: boolean;
   hasVoted: boolean;

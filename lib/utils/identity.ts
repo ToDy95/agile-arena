@@ -1,14 +1,18 @@
+import type { AvatarConfig } from "@/lib/avatar/avatar-types";
+import { normalizeAvatarConfig } from "@/lib/avatar/avatar-utils";
 import { nicknameSchema } from "@/lib/schemas/identity";
 import { generateRandomColor, normalizeHexColor } from "@/lib/utils/color";
 
 export type ResolvedJoinIdentity = {
   nickname: string;
   color: string;
+  avatar: AvatarConfig;
 };
 
 type JoinIdentityInput = {
   nickname: string;
   color: string;
+  avatar: unknown;
 };
 
 type ResolvedJoinIdentityResult =
@@ -38,6 +42,7 @@ export function resolveJoinIdentity(input: JoinIdentityInput): ResolvedJoinIdent
     data: {
       nickname: parsedNickname.data,
       color: resolvedColor,
+      avatar: normalizeAvatarConfig(input.avatar),
     },
   };
 }
