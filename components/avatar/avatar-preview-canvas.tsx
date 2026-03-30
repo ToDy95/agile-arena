@@ -272,7 +272,7 @@ export function AvatarPreviewCanvas({ config }: AvatarPreviewCanvasProps) {
       camera={{ position: [0, 0.96, 2.35], fov: 30 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, alpha: true }}
-      shadows
+      shadows="percentage"
     >
       <ambientLight intensity={0.45} />
       <hemisphereLight args={["#b8d5ff", "#070b14", 0.9]} />
