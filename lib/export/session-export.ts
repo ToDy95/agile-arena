@@ -98,9 +98,14 @@ function csvEscape(value: unknown): string {
     return "";
   }
 
-  const normalized = String(value);
+  const text = String(value);
+  // Treat formula-leading participant text as a literal cell on initial import.
+  // Keep actual numbers/booleans typed, and preserve the original text after the prefix.
+  const formulaLeadingText =
+    typeof value === "string" && /^[\t\r\n]|^\s*[=+\-@＝＋－＠]/u.test(text);
+  const normalized = formulaLeadingText ? `'${text}` : text;
 
-  if (!/[",\n]/.test(normalized)) {
+  if (!formulaLeadingText && !/[",\r\n]/.test(normalized)) {
     return normalized;
   }
 
