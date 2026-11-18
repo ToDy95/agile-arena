@@ -73,6 +73,18 @@ Open `http://localhost:3000`.
 - `pnpm test:e2e:ui`
 - `pnpm test:e2e:headed`
 
+### Session CSV exports
+
+The export quotes commas, quotes and CR/LF line breaks within cells. Formula-leading
+text from names, tasks and retrospective content is quoted with an apostrophe prefix
+to request literal text on initial spreadsheet import. Numeric and boolean
+values keep their normal CSV representation; stored room content is unchanged.
+Some downstream readers display the prefix. Spreadsheet handling varies by application,
+especially after saving and reopening a CSV; see the
+[OWASP CSV injection guidance](https://owasp.org/www-community/attacks/CSV_Injection).
+The offline session-export tests exercise synthetic owner/participant input, mixed
+line endings and a numeric control without contacting Liveblocks.
+
 ### Clean / Reset
 
 - `pnpm clean`
